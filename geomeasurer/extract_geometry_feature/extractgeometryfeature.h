@@ -2,6 +2,10 @@
  * Copyright (c) 2017, <copyright holder> <email>
  * All rights reserved.
  * 
+ * 最完美的应该是，考虑各种特征，包括角点和直线
+ * 先检测角点, 然后再检测直线
+ * 由于点密度的影响,所以插值也是必须的
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -29,15 +33,192 @@
 #ifndef EXTRACTGEOMETRYFEATURE_H
 #define EXTRACTGEOMETRYFEATURE_H
 #include "../io/scan_reader.h"
+#include <Eigen/Dense>
+#include <boost/graph/graph_concepts.hpp>
+//#include <pcl/filters/voxel_grid.h>
+//#include <pcl/kdtree/kdtree.h>
+//#include <pcl/segmentation/extract_clusters.h>
+#include "../common/math_supplement.h"
+#include <falkolib/Feature/FALKO.h>
+#include<falkolib/Feature/FALKOExtractor.h>
+#include<flirtlib/feature/RangeDetector.h>
+//#include<flirtlib/feature/NormalEdgeDetector.h>
+//#include<flirtlib/feature/CurvatureDetector.h>
+#include<flirtlib/feature/InterestPoint.h>
+#include<flirtlib/sensors/LaserReading.h>
+#include<flirtlib/utils/PeakFinder.h>
+
 namespace geomeasurer
 {
+  class keypoint
+  {
+  public:
+    keypoint();
+    keypoint(const int& index_, const double &score_);
+    static bool compare(const keypoint& kp1, const keypoint& kp2);
+    int index;
+    double score;
+  };
+  typedef pcl::PointIndices ClusterIndices;
+  typedef std::vector<keypoint> KeyPoints;
+  typedef PointCloud featurePointSet;
   
   class extractGeometryFeature
 {
+public:
   extractGeometryFeature();
   extractGeometryFeature(const sensor::rangeData & ranges_data);
   extractGeometryFeature(const PointCloud & pcd);
-  void extractgfs();  
+  void setSlideWindowSizes(const int &slide_window_sizes_);
+  void setRegionGrowRadius(const double & region_grow_radius_);
+  void setClusterMinSize(const uint32_t & cluster_min_size_);
+  void setMinIncludedAngle(const double min_angle_);
+  void setNeigh_a(const double & a_);
+  void setNeigh_b(const double & b_);
+  void setIsClustering(const bool & IsClustering_);
+  void setNMSRadius(const double & NMS_radius_);
+  void setBeta(const double &beta);
+  void setGridSetorNum(const int gridSectorsNum_);
+  void setMinNeighNum(const int &min_point_num_);
+  void setMinAloneNum(const int &alone_);
+  
+  featurePointSet  extractgfs(std::string T);
+  featurePointSet extractFAKLO();
+  featurePointSet extractCornerWithAreaTsensor(const ClusterIndices &cluster);
+  featurePointSet extractCornerWithimprovedFAKLO(const ClusterIndices &cluster);
+ //TODO
+ featurePointSet extractFLIRT();
+
+private:
+
+
+  /**
+   * @brief 孤立特征点抑制
+   * @return 抑制后特征点构成的点云
+   */
+  featurePointSet alonePointSupress();
+  /**
+   * @brief 非极大值抑制
+   * @return 抑制后特征点构成的点云
+   */
+   featurePointSet NonMaxSupress();
+   /**
+    * @brief 使用欧式距离进行聚类
+    */
+  std::vector<pcl::PointIndices> EuclideanClusterExtraction() const;
+  
+    /**
+   * @brief 把特征点到点云API
+   */
+  featurePointSet fromKeypoints();
+  /**
+   * @brief 计算每一个点应该有的邻阈的大小
+   *@param range 激光点的距离
+   *@return 邻阈的半径 
+   */
+  float getNeiborhood(const double &range);
+  
+  
+  /**
+   * @brief 根据中点索引，以及邻域半径计算邻域内的点成员
+   */
+void getNeiborhoodMember(const int &numberofCenter2clusterboundary, const size_t& center_index, const double& radius, std::vector< point3d >& neigh, bool flag_Left);
+  
+  /**
+   * @brief 对邻阈内的点的散度进行打分
+   */
+  double EvaulateNeighDivergence(const point3d & center, const std::vector<point3d>& singleSideNeigh);
+  
+  /**
+   * @brief 评估特征点在尺度上的不变性，尺度通过距离响应端点距离中心点远近来判断
+   */
+  double EvaulateInvarianceNeigh(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
+  
+  /**
+   * @brief 越接近直角的特征点越被看好, 为这类特征点一些额外的奖励。
+   */
+  double extra_reward_from(const double &area, const double& area_min);
+  
+  /**
+   * @brief 已知三个端点，计算三角形面积
+   */
+  double computeAreaGivenEndpointCoordinates(const point3d& A1,const point3d &A2, const point3d& A3);
+  
+  /**
+   * @brief 计算面积的阈值
+   * @return 返回面积的阈值
+   */
+  double getAreaThres();
+  
+    /**
+   * @brief 计算面积的阈值
+   * @return 返回面积的阈值
+   */
+  double getAreaThres(double edge1, double edge2);
+  
+  
+  /**
+   * @brief 效果不好，删除不用
+   */
+  featurePointSet  extractgfsWithoutCluster();
+  /**
+   * @brief 使用LOAM中的思想
+   * @test 效果不好，删除不用 
+   */
+  featurePointSet extractFeatureFromCluster(const ClusterIndices & cluster);
+  /**
+   * @brief 选择一个聚类好的线条的两个端点，然后计算中间点在与这两个端点张成的面积
+   * @test 效果不好，删除不用
+   */
+  featurePointSet extractfromTensorField(const ClusterIndices &cluster);
+
+
+
+  sensor::rangeData ranges;
+  PointCloud candiate_pcd;
+  KeyPoints keypoints;
+
+  bool IsClustering=true;
+
+ 
+double ratio_invariance=0.6;
+
+ double min_angle=30;
+ 
+ //这个参数值实际运行时会被覆盖
+ double area_min_size=0.005;
+ 
+ //左右邻域点最少的个数
+ int min_point_num=3;
+  //最小孤立特征点个数
+ int alone=2;
+  
+  //NMS
+    double NMS_radius=0.3;
+    
+  //区域增长, 聚类
+    uint32_t cluster_min_size=4; 
+   double region_grow_radius=10.d;
+  //一下三个参数用来计算邻阈半径
+  float ri;
+  float a=0.2;
+  float b=0.07;
+  
+ int gridSectorsNum=36;
+ 
+ //直角奖励系数 
+ double gainClosingRightAngle=5;
+  
+  //没用
+  float b_ratio=2.5;
+  
+   //没有使用
+ double feature_response_threshold=0.1;
+ 
+ //没有使用
+  int slide_window_sizes=6;
+  
+
 };
 
 }

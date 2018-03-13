@@ -26,28 +26,47 @@
  * 
  */
 
-#include "scan_data.h"
-namespace geomeasurer {
-  namespace sensor {
-    
-PointCloud fromRangeData(const rangeData& ranges_data)
-{
-  PointCloud ret;
-  double angle;
-  int count=0;
-  for(auto range : ranges_data.ranges)
+#include "math_supplement.h"
+
+namespace geomeasurer{
+  
+  namespace math
   {
-    angle=ranges_data.angle_min+count*ranges_data.angle_increment;
-    point3d temPoint;
-    temPoint.x=range*cos(angle);
-    temPoint.y=range*sin(angle);
-    ret.push_back(temPoint);
-   count++;    
-  }  
-  return ret;
-
+    
+    template <typename T1, typename T2>
+    bool comparePair(const std::pair<T1,T2> & var1, const std::pair<T1, T2> &var2)
+    {
+      if(var1.second>var2.second)
+      {
+	return true;
+      }
+      else
+      {
+	return false;
+      }
+    }
+    
+    bool compare(const std::pair<int,double> & var1, const std::pair<int, double> &var2)
+    {
+	       if(var1.second>var2.second)
+	    {
+	      return true;
+	    }
+	    else
+	    {
+	      return false;
+	    }
+   }
+   
+   
+double pointDistance(const point3d& p1, const point3d& p2)
+{
+  double ret_dist;
+  ret_dist=sqrt(pow(p1.x-p2.x,2)+pow(p1.y-p2.y,2)+pow(p1.z-p2.z,2));
+  return ret_dist;
 }
-}//namespace sensor  
+
+   
+   
+  }// namspace math  
 }//namespace geomeasurer
-
-

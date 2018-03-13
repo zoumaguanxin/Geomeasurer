@@ -28,7 +28,6 @@
 
 #ifndef SCAN_READER_H
 #define SCAN_READER_H
-#include <geomeasurer/sensor/scan_data.h>
 #include "../sensor/scan_data.h"
 #include<cstring>
 #include<fstream>

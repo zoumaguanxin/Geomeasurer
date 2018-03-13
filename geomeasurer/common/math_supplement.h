@@ -26,28 +26,26 @@
  * 
  */
 
-#include "scan_data.h"
-namespace geomeasurer {
-  namespace sensor {
+#ifndef MATH_SUPPLEMENT_H
+#define MATH_SUPPLEMENT_H
+#include<utility>
+#include<cmath>
+#include "../sensor/scan_data.h"
+
+namespace geomeasurer{
+  
+  namespace math
+  {    
+    template <typename T1, typename T2>
+    bool comparePair(const std::pair<T1,T2> & var1, const std::pair<T1, T2> &var2);
+    bool compare(const std::pair<int,double> & var1, const std::pair<int, double> &var2);       
+
+    double pointDistance(const point3d& p1, const point3d &p2);
     
-PointCloud fromRangeData(const rangeData& ranges_data)
-{
-  PointCloud ret;
-  double angle;
-  int count=0;
-  for(auto range : ranges_data.ranges)
-  {
-    angle=ranges_data.angle_min+count*ranges_data.angle_increment;
-    point3d temPoint;
-    temPoint.x=range*cos(angle);
-    temPoint.y=range*sin(angle);
-    ret.push_back(temPoint);
-   count++;    
-  }  
-  return ret;
-
+   
+  }
+  
 }
-}//namespace sensor  
-}//namespace geomeasurer
 
 
+#endif // MATH_SUPPLEMENT_H

@@ -41,9 +41,10 @@ sensor::rangeData fromFile(const std::string& filedir)
      file.open(filedir.c_str(), std::ios_base::in);
      if(file.good())
      {
-      file>>ret_range_data.angle_min>>ret_range_data.angle_increment>>ret_range_data.angle_max;
+      file>>ret_range_data.angle_min>>ret_range_data.angle_max>>ret_range_data.angle_increment;
       while(file.good())
-      {  double range;
+      {  
+	double range;
 	 file>>range;
           ret_range_data.ranges.emplace_back(range);
       }
@@ -54,6 +55,7 @@ sensor::rangeData fromFile(const std::string& filedir)
       using namespace std;
      assert(file.good());
     }
+    file.close();
     return ret_range_data;
 }
     
