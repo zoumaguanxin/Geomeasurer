@@ -108,7 +108,7 @@ void imshowPCDFromRanges(const sensor::rangeData &ranges)
 void imshowPCDWithKeypoints(const std::string & name, const sensor::rangeData& ranges, const PointCloud& features )
 {
  auto max_range_Iter=std::max_element(ranges.ranges.begin(),ranges.ranges.end());
-  int width=300+*(max_range_Iter)/0.02f;//注意改为200会报错
+  int width=400+*(max_range_Iter)/0.02f;//注意改为200会报错
   //对应的还有CV_8UC1,CV_8UC2,CV_BUC3
   cv::Mat img(cv::Size(width,width),CV_8UC3,cv::Scalar(255,255,255));  
    PointCloud candidate_pcd=sensor::fromRangeData(ranges);

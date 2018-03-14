@@ -189,12 +189,56 @@ void extractGeometryFeature::getNeiborhoodMember
     }  
 }
 
+std::tuple< double, double,int > extractGeometryFeature::jointEvaluate
+(const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
+{
+
+    //size_t max_scale= std::max<size_t>(LeftNeigh.size(),rightNeigh.size());
+  std::vector<double> sin_Angle_ratios;
+  double score=0;
+  int count=0, Response_count=0;
+  double response_area=0;
+  for(auto left:LeftNeigh)
+  {
+    for(auto right:rightNeigh)
+    {
+      double area=computeAreaGivenEndpointCoordinates(center,left,right);
+      double edg1,edg2, angleRatio;
+    edg1=math::pointDistance(center,left);
+    edg2=math::pointDistance(center,right);
+    double area_min=getAreaThres(edg1,edg2);
+    angleRatio=area/area_min;
+    if(area>area_min)
+    {
+      Response_count++;
+      response_area+=angleRatio;
+    }
+    score+=angleRatio; 
+    sin_Angle_ratios.push_back(angleRatio);
+    count++;
+    }    
+  }  
+  double mean=score/double(count);
+  double response_mean=response_area/double(Response_count);
+  double error=0;
+  for(auto angle_Ratio:sin_Angle_ratios)
+  {
+    double residual=angle_Ratio-response_mean;
+     error+=residual*residual;
+  }
+
+  double variance=error/double(count-1);    
+  return std::make_tuple(response_mean,variance,Response_count/double(count));
+  
+}
+
+
 
 featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const ClusterIndices& cluster)
 {
   featurePointSet ret;
   keypoints.clear();  
-        std::vector<point3d> NeighL;
+    std::vector<point3d> NeighL;
     std::vector<point3d> NeighR;  
   for(int i=0;i<cluster.indices.size();i++)
   {
@@ -205,6 +249,8 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     {
       continue;
     }
+    
+    //计算左右邻域
     double Neigh_Radius=getNeiborhood(ranges.ranges[cluster.indices[i]]);
      std::cout<<"Neigh_R:"<<Neigh_Radius<<std::endl;
     double numofcenter2clusterboundary;
@@ -231,18 +277,26 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     point3d x_L=candiate_pcd.points[cluster.indices[i-NeighL.size()]];
     point3d x_R=candiate_pcd.points[cluster.indices[i+NeighR.size()]];
 
-   double area=computeAreaGivenEndpointCoordinates(point_i,x_L,x_R); 
+   //double area=computeAreaGivenEndpointCoordinates(point_i,x_L,x_R); 
      
-    double edg1,edg2;
-    edg1=math::pointDistance(point_i, x_L);
-    edg2=math::pointDistance(point_i, x_R);
-    area_min_size=getAreaThres(edg1,edg2);
-    //area_min_size=getAreaThres();
-    std::cout<<"area_min_size: "<<area_min_size<<std::endl;
+
+   // double edg1=math::pointDistance(point_i, x_L);
+   // double edg2=math::pointDistance(point_i, x_R);
     
-    double riato=EvaulateInvarianceNeigh(point_i,NeighL,NeighR);
+
+    
+    //****************************************
+    //直接使用面积作为响应
+   //****************************************
+/*    
+    area_min_size=getAreaThres(edg1,edg2);
+    std::cout<<"area_min_size: "<<area_min_size<<std::endl;
+   if(area>area_min_size)*/
+
+    //*********************
      //下面为FAKLO使用的方法 
-    /*
+    //*********************
+  /*
     //底边长度
     double BaseEdge=std::abs(math::pointDistance(x_L,x_R));
     //高
@@ -250,32 +304,58 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
      std::cout<<"底边:"<<BaseEdge<<std::endl;
      std::cout<<"高:"<<High_length<<std::endl;
      std::cout<<"Thres:"<<ri/b_ratio<<std::endl;
-     //if(deterBaseEdge>=(ri/b_ratio)&&deterHigh>=(ri/b_ratio))
-     */
-   // if(area>area_min_size)
-   if(riato>ratio_invariance)
+     //if(deterBaseEdge>=(ri/b_ratio)&&deterHigh>=(ri/b_ratio))*/
+
+     std::pair<double,double> InvarianceAndRightAngleScore;
+     
+    InvarianceAndRightAngleScore=EvaulateInvarianceNeigh(point_i,NeighL,NeighR);
+   if(InvarianceAndRightAngleScore.first>ratio_invariance)
     {
       //计算栅格分值
       double ScoreL=0, ScoreR=0,score=0,extra_reward=0;
-      ScoreL=EvaulateNeighDivergence(point_i,NeighL);
-      std::cout<<ScoreL<<std::endl;
-      ScoreR=EvaulateNeighDivergence(point_i,NeighR);
-      extra_reward=extra_reward_from(area,area_min_size);
-      //score=ScoreL+ScoreR+extra_reward;
-      double rewardfromIvariance=gainClosingRightAngle*ratio_invariance;
-      score=ScoreL+ScoreR-rewardfromIvariance;
-      score=100.d-score;
+	ScoreL=EvaulateNeighDivergence(point_i,NeighL);
+	// std::cout<<ScoreL<<std::endl;
+	ScoreR=EvaulateNeighDivergence(point_i,NeighR);     
+	double DivergenceScore=ScoreL+ScoreR;  
+	// double AngleInvarianceScore=EvaulateAngleQuality(point_i,NeighL,NeighR);
+	//score=InvarianceAndRightAngleScore.second;
+	//score=AngleInvarianceScore;
+	// score=gainClosingRightAngle*RightAnglescore;
+	// score=DivergenceScore;
+	//score=AngleInvarianceScore+gainClosingRightAngle*RightAnglescore+DivergenceScore;
+	double RightAnglescore,Variance;
+	int responseScore;
+      std::tie(RightAnglescore,Variance,responseScore) =jointEvaluate(point_i,NeighL,NeighR);
+     // score=1000+0.8*RightAnglescoreAndVariance.first-0*RightAnglescoreAndVariance.second;
+      // score=responseScore*RightAnglescore/std::sqrt(Variance);
+      double expect=1/sin(min_angle/180.d*M_PI);
+      score=exp((expect-RightAnglescore)*(expect-RightAnglescore)*Variance);
       std::cout<<"score:"<<score<<std::endl;
       keypoints.emplace_back(keypoint(cluster.indices[i], score));
     }    
    NeighL.clear();
    NeighR.clear();
   }
+  
+  //如果不判断，当为空的情况下，迭代器就不会生效，这是对迭代器进行取值就会出错。
+    if(!keypoints.empty())
+    {
+     auto kp_with_maxvalue=std::max_element(keypoints.begin(),keypoints.end(),keypoint::compare);
+     keypoint temkp=*kp_with_maxvalue;
+    double max_score=temkp.score;
+	
+	for(auto iter=keypoints.begin();iter!=keypoints.end();++iter)
+	{
+	  double tem=(*iter).score;
+	  (*iter).score=tem;	 
+	}
+    }
+ 
   //孤立点抑制
- //alonePointSupress();  
+   alonePointSupress();  
  //非极大值抑制 
-     return NonMaxSupress();
-    //return fromKeypoints();
+  return NonMaxSupress();
+ return fromKeypoints();
  
 }
 
@@ -469,20 +549,25 @@ featurePointSet extractGeometryFeature::NonMaxSupress()
   {
         return ret;      
   }
-   std::cout<<"检测到特征点个数"<<keypoints.size()<<std::endl;   
+  
    /*
+   std::cout<<"检测到特征点个数"<<keypoints.size()<<std::endl;     
    for(auto kp:keypoints)
    {
      std::cout<<"index:"<<kp.index<<" "<<"score:"<<kp.score<<std::endl;
   }
   */
-   
+   double max_score=0;
+   bool first=true;
   while(!keypoints.empty())
   {
      KeyPoints tem_keypoints;
-     tem_keypoints.clear();
-    auto kp_with_maxvalue=std::max_element(keypoints.begin(),keypoints.end(),keypoint::compare);
+     auto kp_with_maxvalue=std::max_element(keypoints.begin(),keypoints.end(),keypoint::compare);
      keypoint temkp=*kp_with_maxvalue;
+     if(first)
+     {
+       max_score=temkp.score;
+    }
     nmsed_keypoints.emplace_back(temkp);
     keypoints.erase(kp_with_maxvalue);
     if(keypoints.empty())
@@ -516,7 +601,10 @@ featurePointSet extractGeometryFeature::NonMaxSupress()
 
   for(keypoint kp:keypoints)
   {
-    ret.push_back(candiate_pcd.points[kp.index]);
+    if(kp.score>=minValPercent*max_score)
+    {
+      ret.push_back(candiate_pcd.points[kp.index]);
+    }
   }
   //keypoints.clear();
   std::cout<<"NMS后特征点个数:"<<ret.size()<<std::endl;
@@ -533,7 +621,7 @@ featurePointSet extractGeometryFeature::alonePointSupress()
     for(auto kpj:keypoints)
     {
       double dist=math::pointDistance(candiate_pcd.points[kpi.index],candiate_pcd.points[kpj.index]);
-      if(dist<=NMS_radius)
+      if(dist<=alone_radius)
       {
 	count++;
       }
@@ -586,6 +674,50 @@ double extractGeometryFeature::extra_reward_from(const double& area,const double
    return gainClosingRightAngle*area/area_min;
 }
 
+std::vector< int > extractGeometryFeature::computeNeighPlorDistribution(const point3d& center, const std::vector< point3d >& singleSideNeigh)
+{
+ std::vector<int> V_sector;
+      double scoreSingleSide=0;
+       int count=0;
+      for(auto point:singleSideNeigh)
+      {
+	int SecNum=std::floor(gridSectorsNum/(2*M_PI)*std::atan2(point.y-center.y, point.x-center.x));
+	if(SecNum<0)
+	{
+	  SecNum=gridSectorsNum+SecNum;
+	}	
+	V_sector.push_back(SecNum);
+      }
+      return V_sector;
+}
+
+double extractGeometryFeature::EvaulateAngleQuality(const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
+{
+  std::vector<int> V_left,V_Right, V_dist;
+  V_left=computeNeighPlorDistribution(center,LeftNeigh);
+  V_Right=computeNeighPlorDistribution(center,rightNeigh);
+  int sum_dist=0,count=0,dist=0;
+  for(auto left:V_left)
+  {
+    for(auto right:V_Right)
+    {
+     count++;      
+     dist= std::abs((left-right+gridSectorsNum/2)%gridSectorsNum-gridSectorsNum/2);
+     sum_dist+=dist;
+     V_dist.emplace_back(dist);
+    }
+  }
+  double mean_dist=sum_dist/double(count);
+  double error=0,residual=0;
+ for(auto dist:V_dist)
+ {
+   residual=dist-mean_dist;
+   error+=residual*residual;
+}
+double variance=error/double(count-1); 
+return variance;
+}
+
 
 double extractGeometryFeature::EvaulateNeighDivergence(const point3d &center, const  std::vector< point3d > &singleSideNeigh)
 {
@@ -609,27 +741,57 @@ double extractGeometryFeature::EvaulateNeighDivergence(const point3d &center, co
 	  }
 	V_sector.push_back(SecNum);
       }
-      scoreSingleSide=scoreSingleSide/count;
+     //scoreSingleSide=scoreSingleSide/count;
      V_sector.clear();
       return scoreSingleSide;
 }
 
 
-double extractGeometryFeature::EvaulateInvarianceNeigh(const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
+std::pair<double,double> extractGeometryFeature::EvaulateInvarianceNeigh(const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
 {
+/*
   size_t max_scale= std::max<size_t>(LeftNeigh.size(),rightNeigh.size());
+  std::vector<double> sin_Angle_ratios;
+  double score=0;
   int Response_count=0;
   for(int i=0;i<max_scale;i++)
   {
     double area=computeAreaGivenEndpointCoordinates(center,LeftNeigh[i],rightNeigh[i]);
-    double edg1,edg2;
+    double edg1,edg2, angleRatio;
     edg1=math::pointDistance(center,LeftNeigh[i]);
     edg2=math::pointDistance(center,rightNeigh[i]);
     double area_min=getAreaThres(edg1,edg2);
+    angleRatio=area/area_min;
+    score+=angleRatio;
     if(area>area_min) Response_count++;
     }
-    return Response_count/double(max_scale);
+    return std::make_pair(Response_count/double(max_scale),score/double(max_scale));
+    */
+
+ double score=0;
+int count=0, Response_count=0;
+  double response_area=0;
+  for(auto left:LeftNeigh)
+  {
+    for(auto right:rightNeigh)
+    {
+      double area=computeAreaGivenEndpointCoordinates(center,left,right);
+      double edg1,edg2, angleRatio;
+    edg1=math::pointDistance(center,left);
+    edg2=math::pointDistance(center,right);
+    double area_min=getAreaThres(edg1,edg2);
+    angleRatio=area/area_min;
+    if(area>area_min)
+    {
+      Response_count++;
+    }
+    count++;
+    }    
+  }   
+ return std::make_pair(Response_count/double(count),score/double(count));
+
 }
+
 
 double extractGeometryFeature::computeAreaGivenEndpointCoordinates(const point3d& A1, const point3d& A2, const point3d& A3)
 {

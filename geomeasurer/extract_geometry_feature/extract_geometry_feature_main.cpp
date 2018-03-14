@@ -14,7 +14,7 @@ int main()
   cv::Mat img(1000,1000,CV_8UC1, cv::Scalar(255)); 
 
   sensor::rangeData ranges;
-  std::string filedir="../geomeasurer/data/scan003";
+  std::string filedir="../geomeasurer/data/scan";
 
   ranges=io::fromFile(filedir);
   extractGeometryFeature gfs(ranges);

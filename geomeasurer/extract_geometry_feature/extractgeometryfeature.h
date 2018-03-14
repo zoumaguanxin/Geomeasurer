@@ -59,6 +59,7 @@ namespace geomeasurer
     int index;
     double score;
   };
+ 
   typedef pcl::PointIndices ClusterIndices;
   typedef std::vector<keypoint> KeyPoints;
   typedef PointCloud featurePointSet;
@@ -129,10 +130,17 @@ void getNeiborhoodMember(const int &numberofCenter2clusterboundary, const size_t
    */
   double EvaulateNeighDivergence(const point3d & center, const std::vector<point3d>& singleSideNeigh);
   
+  
+  std::vector<int> computeNeighPlorDistribution(const point3d & center, const std::vector<point3d>& singleSideNeigh);
+  
+ std::tuple< double, double,int > jointEvaluate(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
+  
+  double EvaulateAngleQuality(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
+  
   /**
    * @brief 评估特征点在尺度上的不变性，尺度通过距离响应端点距离中心点远近来判断
    */
-  double EvaulateInvarianceNeigh(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
+std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
   
   /**
    * @brief 越接近直角的特征点越被看好, 为这类特征点一些额外的奖励。
@@ -189,12 +197,14 @@ double ratio_invariance=0.6;
  double area_min_size=0.005;
  
  //左右邻域点最少的个数
- int min_point_num=3;
+ int min_point_num=2;
   //最小孤立特征点个数
  int alone=2;
+ 
+ double alone_radius=0.15;
   
   //NMS
-    double NMS_radius=0.3;
+    double NMS_radius=0.2;
     
   //区域增长, 聚类
     uint32_t cluster_min_size=4; 
@@ -204,10 +214,12 @@ double ratio_invariance=0.6;
   float a=0.2;
   float b=0.07;
   
+  double minValPercent=0.2;
+  
  int gridSectorsNum=36;
  
  //直角奖励系数 
- double gainClosingRightAngle=5;
+ double gainClosingRightAngle=10;
   
   //没用
   float b_ratio=2.5;
