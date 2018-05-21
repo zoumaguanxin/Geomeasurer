@@ -132,14 +132,14 @@ featurePointSet extractGeometryFeature::extractFAKLO()
 {
 	featurePointSet ret_keypoints;
 	falkolib::FALKOExtractor fe;
-	fe.setMinScoreTh(50);
+	fe.setMinScoreTh(0);
 	fe.setMinExtractionRange(0.5);
 	fe.setMaxExtractionRange(30);
 	fe.enableSubbeam(false);
-	fe.setNMSRadius(0.1);
+	fe.setNMSRadius(0.2);
 	fe.setNeighB(0.07);
 	fe.setBRatio(3);//2.5
-	fe.setGridSectors(16);//16
+	fe.setGridSectors(36);//16
 
 	falkolib::LaserScan scan(ranges.angle_min,6*3.1419f/4, ranges.ranges.size());
 	scan.fromRanges(ranges.ranges);
@@ -189,15 +189,17 @@ void extractGeometryFeature::getNeiborhoodMember
     }  
 }
 
-std::tuple< double, double,int > extractGeometryFeature::jointEvaluate
+std::tuple< double, double,double> extractGeometryFeature::jointEvaluate
 (const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
 {
 
     //size_t max_scale= std::max<size_t>(LeftNeigh.size(),rightNeigh.size());
-  std::vector<double> sin_Angle_ratios;
+  std::vector<double> response_Angle_ratios;
+  std::vector<double> all_angle_ratios;
   double score=0;
   int count=0, Response_count=0;
   double response_area=0;
+
   for(auto left:LeftNeigh)
   {
     for(auto right:rightNeigh)
@@ -212,23 +214,84 @@ std::tuple< double, double,int > extractGeometryFeature::jointEvaluate
     {
       Response_count++;
       response_area+=angleRatio;
+      response_Angle_ratios.push_back(angleRatio);
     }
     score+=angleRatio; 
-    sin_Angle_ratios.push_back(angleRatio);
+    all_angle_ratios.push_back(angleRatio);
     count++;
     }    
   }  
+  
+  //数据分布均值
   double mean=score/double(count);
+  //理论分布均值
   double response_mean=response_area/double(Response_count);
-  double error=0;
-  for(auto angle_Ratio:sin_Angle_ratios)
+  
+  double error=0, error1=0, error2=0;
+  double sigma=0;
+  
+  for(auto angle_Ratio:response_Angle_ratios)
   {
     double residual=angle_Ratio-response_mean;
      error+=residual*residual;
   }
+    double variance_response=error/double(Response_count-1);
+  
+    for(auto angle_Ratio:all_angle_ratios)
+  {
+     double residual=angle_Ratio-mean;
+      error1+=residual*residual;
+  }
+    double variance_all=error1/double(count-1);
+    
+    for(auto angle_Ratio:all_angle_ratios)
+  {
+    double residual=angle_Ratio-response_mean;
+     error2+=residual*residual;
+  } 
+  double mutual_variance=error2/double(count-1);
+ 
+  
+  //计算相对熵
+  double sigma_theroy=std::sqrt(variance_response);
+  double sigma_data=std::sqrt(variance_all);
+  double alpha_data=1/(double(std::sqrt(M_PI)*sigma_data));
+  double alpha_theroy=alpha_data*(sigma_data/sigma_theroy);
+ 
+  double D_P_Q=0;
 
-  double variance=error/double(count-1);    
-  return std::make_tuple(response_mean,variance,Response_count/double(count));
+  std::vector<double> P, Q;
+  double sum_p=0,sum_q=0;
+    for(auto angle_Ratio:all_angle_ratios)
+  {
+      //   std::cout<<"alpha_data:"<<alpha_data<<std::endl;
+   //std::cout<<"alpha_theroy:"<<alpha_theroy<<std::endl;
+    double residual=angle_Ratio-response_mean;
+    double residual_data=angle_Ratio-mean;
+   // std::cout<<"residual:"<<residual<<std::endl;
+   //std::cout<<"residual_data:"<<residual_data<<std::endl;
+    double qi=alpha_theroy*exp(-1/2.d*(residual*residual)/variance_response);
+    double pi=alpha_data*exp(-1/2.d*(residual_data*residual_data)/variance_all);
+   //std::cout<<"qi:"<<qi<<std::endl;
+    sum_p+=pi;
+    sum_q+=qi;
+   //std::cout<<"pi:"<<qi<<std::endl;
+    P.push_back(pi);
+    Q.push_back(qi);
+   //double d=(qi*log(qi/pi)+pi*log(pi/qi))/2;  
+   // D_P_Q+=d;
+  }
+  
+
+  for(int i=0;i<P.size();i++)
+  {
+      D_P_Q+=(P[i]/sum_p*log(P[i]*sum_q/(sum_p*Q[i]))+Q[i]/sum_q*log(Q[i]*sum_p/(sum_q*P[i])))/2;   
+    // D_P_Q+=Q[i]/sum_q*log(Q[i]*sum_p/(sum_q*P[i]));
+    // D_P_Q+= P[i]/sum_p*log(P[i]*sum_q/(sum_p*Q[i]));
+  }
+
+  // D_P_Q=sum_q;
+  return std::make_tuple(response_mean,mutual_variance,D_P_Q);
   
 }
 
@@ -312,7 +375,7 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
    if(InvarianceAndRightAngleScore.first>ratio_invariance)
     {
       //计算栅格分值
-      double ScoreL=0, ScoreR=0,score=0,extra_reward=0;
+         double ScoreL=0, ScoreR=0,score=0,extra_reward=0;
 	ScoreL=EvaulateNeighDivergence(point_i,NeighL);
 	// std::cout<<ScoreL<<std::endl;
 	ScoreR=EvaulateNeighDivergence(point_i,NeighR);     
@@ -321,14 +384,15 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
 	//score=InvarianceAndRightAngleScore.second;
 	//score=AngleInvarianceScore;
 	// score=gainClosingRightAngle*RightAnglescore;
-	// score=DivergenceScore;
+	 //score=DivergenceScore;
 	//score=AngleInvarianceScore+gainClosingRightAngle*RightAnglescore+DivergenceScore;
 	double RightAnglescore,Variance;
-	int responseScore;
+	double responseScore;
       std::tie(RightAnglescore,Variance,responseScore) =jointEvaluate(point_i,NeighL,NeighR);
-     // score=1000+0.8*RightAnglescoreAndVariance.first-0*RightAnglescoreAndVariance.second;
+      // score=1000+0.8*RightAnglescoreAndVariance.first-0*RightAnglescoreAndVariance.second;
       // score=responseScore*RightAnglescore/std::sqrt(Variance);
-      double expect=1/sin(min_angle/180.d*M_PI);
+       double expect=1/sin(min_angle/180.d*M_PI);
+      // score=1000-responseScore;
       score=exp((expect-RightAnglescore)*(expect-RightAnglescore)*Variance);
       std::cout<<"score:"<<score<<std::endl;
       keypoints.emplace_back(keypoint(cluster.indices[i], score));
@@ -352,9 +416,9 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     }
  
   //孤立点抑制
-   alonePointSupress();  
+ alonePointSupress();  
  //非极大值抑制 
-  return NonMaxSupress();
+ return NonMaxSupress();
  return fromKeypoints();
  
 }
@@ -377,6 +441,12 @@ featurePointSet extractGeometryFeature::extractFLIRT()
 }
 
 
+/*
+discriptors extractGeometryFeature::getGCdiscriptor(const point3d &center)
+{
+  getNeiborhoodMember();
+
+}*/
 
 
 
@@ -541,6 +611,8 @@ featurePointSet extractGeometryFeature::extractCornerWithAreaTsensor(const Clust
 featurePointSet extractGeometryFeature::NonMaxSupress()
 {
   
+  
+  //仍然有待改进，也最好是先计算索引窗口范围，在这个索引窗口内直接抑制。同时，对于打分十分接近的，直接选用打分接近的结构上在中间的点，就不要在抑制了
   //先找出最大值，然后找到在该点抑制半径范围内的点，将这些点去除
   //直到容器为空
   KeyPoints nmsed_keypoints;
@@ -598,12 +670,12 @@ featurePointSet extractGeometryFeature::NonMaxSupress()
   keypoints.clear();
   keypoints.assign(nmsed_keypoints.begin(),nmsed_keypoints.end());
   
-
   for(keypoint kp:keypoints)
   {
     if(kp.score>=minValPercent*max_score)
     {
       ret.push_back(candiate_pcd.points[kp.index]);
+      Allkeypoints.push_back(kp);
     }
   }
   //keypoints.clear();
@@ -702,7 +774,7 @@ double extractGeometryFeature::EvaulateAngleQuality(const point3d& center, const
     for(auto right:V_Right)
     {
      count++;      
-     dist= std::abs((left-right+gridSectorsNum/2)%gridSectorsNum-gridSectorsNum/2);
+     dist= std::abs((abs(left-right)+gridSectorsNum/2)%gridSectorsNum-gridSectorsNum/2);
      sum_dist+=dist;
      V_dist.emplace_back(dist);
     }
@@ -736,7 +808,7 @@ double extractGeometryFeature::EvaulateNeighDivergence(const point3d &center, co
 	    for(auto Sec_i:V_sector)
 	    {
 	      count++;
-	      scoreSingleSide+=std::abs((SecNum-Sec_i+gridSectorsNum/2)%gridSectorsNum-gridSectorsNum/2);
+	      scoreSingleSide+=std::abs((abs(SecNum-Sec_i)+gridSectorsNum/2)%gridSectorsNum-gridSectorsNum/2);
 	    }
 	  }
 	V_sector.push_back(SecNum);
@@ -768,8 +840,8 @@ std::pair<double,double> extractGeometryFeature::EvaulateInvarianceNeigh(const p
     return std::make_pair(Response_count/double(max_scale),score/double(max_scale));
     */
 
- double score=0;
-int count=0, Response_count=0;
+  double score=0;
+  int count=0, Response_count=0;
   double response_area=0;
   for(auto left:LeftNeigh)
   {
@@ -806,90 +878,189 @@ double extractGeometryFeature::computeAreaGivenEndpointCoordinates(const point3d
 }
 
 
-//使用的LOAM中的思想，只不过是考虑了点云密度对求重心的影响
-//效果很差
-featurePointSet extractGeometryFeature::extractFeatureFromCluster(const ClusterIndices& cluster)
-{  
-    featurePointSet ret;
-    Eigen::Vector3f centriod; 
-    std::cout<<"当前类尺寸："<<cluster.indices.size()<<std::endl;
-  for(int i=0;i<cluster.indices.size();i++)
-   {
-     if(i>0&&i<slide_window_sizes)
-     {
-       continue;
-       	std::cout<<"228"<<std::endl;
-       centriod.setZero();
-       int num=0;
-       /*
-       for(int j=1;j<=i;j++)
+Discriptors extractGeometryFeature::getGCdiscriptor()
+{
+    GCdiscriptors.resize(dscpSectorsNum,Allkeypoints.size()); 
+    std::cout<<GCdiscriptors.rows()<<std::endl;
+    std::cout<<GCdiscriptors.cols()<<std::endl;
+    GCdiscriptors.setZero();
+         int j=0,i=0;
+    for(keypoint kp:Allkeypoints)
+    {
+      
+      double r=getNeiborhood(ranges.ranges[kp.index]);
+      std::vector<point3d> NeighL,NeighR;
+      point3d current_point=candiate_pcd.points[kp.index];
+      getNeiborhoodMember(kp.index,kp.index,r,NeighL,true);
+      getNeiborhoodMember(ranges.ranges.size()-kp.index-1,kp.index,r,NeighR, false);
+      point3d centriod;
+      centriod.x=0;centriod.y=0;centriod.z=0;
+
+      //计算左右边各自的栅格分布
+      double left_edge=0, right_edge=0;
+      for(point3d temp:NeighL)
       {
-	num+=2;
-      centriod(0)+=(candiate_pcd.points[cluster.indices[i]-j].x+candiate_pcd.points[cluster.indices[i]+j].x);
-      centriod(1)+=(candiate_pcd.points[cluster.indices[i]-j].y+candiate_pcd.points[cluster.indices[i]+j].y);
-      centriod(2)+=(candiate_pcd.points[cluster.indices[i]-j].z+candiate_pcd.points[cluster.indices[i]+j].z);
-      } 
-      */
-      centriod(0)+=(candiate_pcd.points[cluster.indices[i]-i].x+candiate_pcd.points[cluster.indices[i]+i].x);
-      centriod(1)+=(candiate_pcd.points[cluster.indices[i]-i].y+candiate_pcd.points[cluster.indices[i]+i].y);
-      centriod(2)+=(candiate_pcd.points[cluster.indices[i]-i].z+candiate_pcd.points[cluster.indices[i]+i].z);
-      centriod/=num;
-    }
-     
-     else if(i>slide_window_sizes&&i<cluster.indices.size()-slide_window_sizes-1)
-     {
-       //计算点到几何中心的距离
-       centriod.setZero();
-       
-       /*
-      for(int j=1;j<=slide_window_sizes;j++)
-      {
-      centriod(0)+=(candiate_pcd.points[cluster.indices[i]-j].x+candiate_pcd.points[cluster.indices[i]+j].x);
-      centriod(1)+=(candiate_pcd.points[cluster.indices[i]-j].y+candiate_pcd.points[cluster.indices[i]+j].y);
-      centriod(2)+=(candiate_pcd.points[cluster.indices[i]-j].z+candiate_pcd.points[cluster.indices[i]+j].z);
+	double  temp_index=dscpSectorsNum/(2*M_PI)*atan2(temp.y- current_point.y,-current_point.x+temp.x);
+	  if (temp_index<0)
+	  {
+	    temp_index+=dscpSectorsNum;
+	  }
+        left_edge+=temp_index;  
+	centriod.x+=temp.x;
+	centriod.y+=temp.y;
+	centriod.z+=temp.z;
       }
-      */
-       int j=slide_window_sizes;
-      centriod(0)+=(candiate_pcd.points[cluster.indices[i]-j].x+candiate_pcd.points[cluster.indices[i]+j].x);
-      centriod(1)+=(candiate_pcd.points[cluster.indices[i]-j].y+candiate_pcd.points[cluster.indices[i]+j].y);
-      centriod(2)+=(candiate_pcd.points[cluster.indices[i]-j].z+candiate_pcd.points[cluster.indices[i]+j].z);
-      centriod=centriod/(2*slide_window_sizes);
-     }
-     else if(i>cluster.indices.size()-slide_window_sizes&&i<cluster.indices.size()-1)
+            
+      
+      for(point3d temp:NeighR)
+      {	
+	 double  temp_index=dscpSectorsNum/(2*M_PI)*atan2(temp.y- current_point.y,-current_point.x+temp.x);
+	  if (temp_index<0)
+	  {
+	    temp_index+=dscpSectorsNum;
+	  }
+	right_edge+=temp_index;
+	centriod.x+=temp.x;
+	centriod.y+=temp.y;
+	centriod.z+=temp.z;
+      }
+      
+      
+      
+       std::cout<<"left_edeg:"<<floor(left_edge/NeighL.size())<<std::endl;
+      std::cout<<"right_edge:"<<floor(right_edge/NeighR.size())<<std::endl;
+      //计算主方向main_direction_num_new为一定程度上考虑了点云密度变化的主方向
+      int main_direction_num_new=(floor(left_edge/NeighL.size())+floor(right_edge/NeighR.size()))/2;
+      std::cout<<"main_direction_num_new:"<<main_direction_num_new<<std::endl;
+      assert(main_direction_num_new<=dscpSectorsNum);
+
+     //直接使用所谓的几何中心计算的主方向，效果明显很差 
+      centriod.x/=(NeighL.size()+NeighR.size());
+      centriod.y/=(NeighL.size()+NeighR.size()); 
+     int main_direction_num;
+    main_direction_num=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod.y-current_point.y,centriod.x-current_point.x));
+    if (main_direction_num<0)
+    {
+      main_direction_num+=dscpSectorsNum;
+    }
+      
+      //使用最近特征点，构建主方向
+      int left_endpoint_index,right_endpoint_index;
+      double dist_min, dist_second;
+      bool first=true;
+      for(keypoint kpk:Allkeypoints)
+      {
+	 if(kpk.index!=kp.index)
+	 {
+	  point3d  temppoint=candiate_pcd.points[kpk.index];
+          double dist=math::pointDistance(temppoint,current_point);
+	  if(first)
+	  {
+	    dist_min=dist;
+	    left_endpoint_index=kpk.index;
+	    first=false;
+	  }
+	 else if(dist<=dist_min)
+	  {
+	    dist_second=dist_min;
+	    right_endpoint_index=left_endpoint_index;
+	    dist_min=dist;
+	    left_endpoint_index=kpk.index;
+	  }
+	 }
+      }
+      
+      point3d left_endpoint=candiate_pcd.points[left_endpoint_index];
+      point3d right_endpoint=candiate_pcd.points[right_endpoint_index];
+       
+      point3d centriod_right;
+      centriod_right.x=(left_endpoint.x+right_endpoint.x+current_point.x)/3;
+      centriod_right.y=(left_endpoint.y+right_endpoint.y+current_point.y)/3;
+      
+     int feature_based_main_direction;
+     feature_based_main_direction=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod_right.y-current_point.y,centriod_right.x-current_point.x));
+      if (feature_based_main_direction<0)
+      {
+          feature_based_main_direction+=dscpSectorsNum;
+      }
+           
+        
+    
+    //计算特征点在栅格内的分布
+    for(keypoint kpj:Allkeypoints)
+      {
+      if(kpj.index==kp.index)
       {
 	continue;
-	std::cout<<"267"<<std::endl;
-	centriod.setZero();
-	int num=0;
-	/*
-       for(int j=1;j<cluster.indices.size()-i;j++)
+      }
+      point3d kppoint=candiate_pcd.points[kpj.index];
+       int kp_sector_num;
+       kp_sector_num=floor(dscpSectorsNum/(2*M_PI)*atan2(kppoint.y-current_point.y,kppoint.x-current_point.x));
+       if(kp_sector_num<0)
+       {
+	 kp_sector_num+=dscpSectorsNum;
+      }
+      int diff=kp_sector_num-feature_based_main_direction;
+      if(diff<0)
       {
-	num+=2;
-	centriod(0)+=(candiate_pcd.points[cluster.indices[i]-j].x+candiate_pcd.points[cluster.indices[i]+j].x);
-	centriod(1)+=(candiate_pcd.points[cluster.indices[i]-j].y+candiate_pcd.points[cluster.indices[i]+j].y);
-	centriod(2)+=(candiate_pcd.points[cluster.indices[i]-j].z+candiate_pcd.points[cluster.indices[i]+j].z);
+	kp_sector_num=dscpSectorsNum+diff;
       }
-      */
-      num+=2;
-      int j=cluster.indices.size()-i;
-      centriod(0)+=(candiate_pcd.points[cluster.indices[i]-j].x+candiate_pcd.points[cluster.indices[i]+j].x);
-      centriod(1)+=(candiate_pcd.points[cluster.indices[i]-j].y+candiate_pcd.points[cluster.indices[i]+j].y);
-      centriod(2)+=(candiate_pcd.points[cluster.indices[i]-j].z+candiate_pcd.points[cluster.indices[i]+j].z);
-      centriod=centriod/num;
+      else{
+	kp_sector_num=diff;
       }
-     
-      //响应值
-      double response=sqrt(pow(centriod(0)-candiate_pcd.points[cluster.indices[i]].x,2)+pow(centriod(1)-candiate_pcd.points[cluster.indices[i]].y,2)
-      +pow(centriod(2)-candiate_pcd.points[cluster.indices[i]].z,2));
-      if(response>feature_response_threshold)
-	{
-	    keypoints.emplace_back(keypoint(cluster.indices[i],response));
-	}
-     }
-     ret=NonMaxSupress();
-     return ret;
+       double dist=math::pointDistance(kppoint,current_point);
+       if(GCdiscriptors(kp_sector_num,i)==0)
+       GCdiscriptors(kp_sector_num,i)=log(dist);
+       else if (GCdiscriptors(kp_sector_num,i)>log(dist))
+       {
+	    GCdiscriptors(kp_sector_num,i)=log(dist);
+       }      
+    }
+     i++; 
+    }
+    return GCdiscriptors;
 }
 
+
+std::vector<std::tuple< int, int, double > > extractGeometryFeature::match(const KeyPoints& kps, const Discriptors& GCS)
+{ 
+     int i=0;
+     std::vector<std::tuple<int,int,double>> pairs;
+    assert(GCS.cols()>0&&GCS.rows()>0);
+    for(keypoint kpi:Allkeypoints)
+    {double max_score=0, second_score=0;
+      int max_index;
+     int  j=0;
+      for(keypoint kpj:kps)
+      {	 
+	double score=0;
+	for(int k=0;k<GCS.rows();k++)
+	{
+	  if(GCS(k,j)>0&&GCdiscriptors(k,i)>0)
+	  {
+	  double dist=abs(GCS(k,j)-GCdiscriptors(k,i));
+	  if(abs(dist)<=match_dist_thres)
+	  {
+	    score+=20.d;
+	  }
+	  }
+	}
+	 if(score>=max_score)
+	 {
+	second_score=max_score;
+	max_score=score;
+	max_index=kpj.index;
+	 }	
+	j++;
+      }
+      if((max_score/second_score)>=distinct_ratio&&(max_score>=match_score_min))
+      {
+	pairs.push_back(std::make_tuple(kpi.index,max_index,max_score));
+      }
+      i++;
+    }    
+    return pairs;
+}
 
 
 /**
@@ -969,39 +1140,16 @@ featurePointSet extractGeometryFeature::extractfromTensorField(const ClusterIndi
 }
 
 
-//没有使用聚类, 使用的方法是在滑动的窗口内，检测点到几何中心的距离，如果很大则被视为是特征点（角点）
-featurePointSet extractGeometryFeature::extractgfsWithoutCluster()
+KeyPoints extractGeometryFeature::getKeypoints()
 {
-   featurePointSet ret;
-   std::vector<std::pair<int, double>> candiate_Index;
-   for(int i=0;i<candiate_pcd.size();i++)
-   {
-     Eigen::Vector3f centriod;
-     if(i>slide_window_sizes&&i<candiate_pcd.size()-slide_window_sizes-1)
-     {
-       //计算点到几何中心的距离
-       centriod.setZero();
-      for(int j=1;j<=slide_window_sizes;j++)
-      {
-      centriod(0)+=(candiate_pcd.points[i-j].x+candiate_pcd.points[i+j].x);
-      centriod(1)+=(candiate_pcd.points[i-j].y+candiate_pcd.points[i+j].y);
-      centriod(2)+=(candiate_pcd.points[i-j].z+candiate_pcd.points[i+j].z);
-      }
-      centriod=centriod/(2*slide_window_sizes);
-      
-      //响应值
-      double dist=sqrt(pow(centriod(0)-candiate_pcd.points[i].x,2)+pow(centriod(1)-candiate_pcd.points[i].y,2)
-      +pow(centriod(2)-candiate_pcd.points[i].z,2)); 
-      if(candiate_Index.size()>=10)
-      {
-	auto feature=std::max_element(candiate_Index.begin(),candiate_Index.end(), math::compare);
-	std::cout<<feature->first<<std::endl;
-	ret.push_back(candiate_pcd.points[feature->first]);
-	candiate_Index.clear();
-      }    
-     }
-  }
- return ret;
+   return Allkeypoints;
 }
+
+point3d extractGeometryFeature::GetPoint3dfromIndex(const int & pointIndex)
+{
+  return candiate_pcd.points[pointIndex];
+}
+
+
  
 }

@@ -6,4 +6,5 @@ add_subdirectory(transform)
 add_subdirectory(sensor)
 add_subdirectory(io)
 add_subdirectory(viz)
-
+add_subdirectory(get_discriptors)
+add_subdirectory(get_discriptors)

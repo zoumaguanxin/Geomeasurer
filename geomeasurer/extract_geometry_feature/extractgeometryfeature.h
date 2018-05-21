@@ -63,7 +63,9 @@ namespace geomeasurer
   typedef pcl::PointIndices ClusterIndices;
   typedef std::vector<keypoint> KeyPoints;
   typedef PointCloud featurePointSet;
-  
+  typedef Eigen::MatrixXf Discriptors;
+  typedef std::vector<int> NeighIndices;
+   
   class extractGeometryFeature
 {
 public:
@@ -83,10 +85,26 @@ public:
   void setMinNeighNum(const int &min_point_num_);
   void setMinAloneNum(const int &alone_);
   
-  featurePointSet  extractgfs(std::string T);
+  featurePointSet extractgfs(std::string T);
   featurePointSet extractFAKLO();
   featurePointSet extractCornerWithAreaTsensor(const ClusterIndices &cluster);
   featurePointSet extractCornerWithimprovedFAKLO(const ClusterIndices &cluster);
+  /**
+   * @brief 返回一次激光数据中的特征点，note，必须先执行提取步骤，否则为空
+   */
+  KeyPoints getKeypoints();
+  
+  /**
+   * @brief 获取激光描述子
+   */
+  Discriptors getGCdiscriptor();
+  
+  /**
+   * @brief 已知索引，返回3D坐标
+   */
+  point3d GetPoint3dfromIndex(const int &pointIndex);
+  
+  std::vector<std::tuple<int,int,double> > match(const KeyPoints &kps, const Discriptors &GCS);
  //TODO
  featurePointSet extractFLIRT();
 
@@ -112,6 +130,8 @@ private:
    * @brief 把特征点到点云API
    */
   featurePointSet fromKeypoints();
+  
+  
   /**
    * @brief 计算每一个点应该有的邻阈的大小
    *@param range 激光点的距离
@@ -122,18 +142,40 @@ private:
   
   /**
    * @brief 根据中点索引，以及邻域半径计算邻域内的点成员
+   * @param numberofCenter2clusterboundary 中点到类的边界点的个数
+   * @param center_index 中心点索引
+   * @param radius 邻域半径
+   * @param[out] neigh 返回计算到的邻域点集合
+   * @param[in] flag_Left 如果是计算左边邻域则设为true,计算右边设置为false
    */
 void getNeiborhoodMember(const int &numberofCenter2clusterboundary, const size_t& center_index, const double& radius, std::vector< point3d >& neigh, bool flag_Left);
   
   /**
    * @brief 对邻阈内的点的散度进行打分
+   * @param center 中心点
+   * @param singleSideNeigh 某一边邻域内的点
+   * @return 分散打分，越分散分越大
    */
   double EvaulateNeighDivergence(const point3d & center, const std::vector<point3d>& singleSideNeigh);
   
   
+  /**
+   * @brief 计算点在栅格上的位置
+   * @param center 中心点 
+   * @param singleSideNeigh 邻域内点
+   * @return 栅格位置，与之前点的顺序对应
+   */
   std::vector<int> computeNeighPlorDistribution(const point3d & center, const std::vector<point3d>& singleSideNeigh);
   
- std::tuple< double, double,int > jointEvaluate(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
+  
+  /**
+   * @brief 联合评估当前特征点的打分
+   * @param[in] center 当前特征点三位坐标
+   * @param[in] LeftNeigh 左邻域内的点
+   * @param[in] rightNeigh 右邻域内的点
+   * @return 影响角度的均值、协方差度、KL散度
+   */
+ std::tuple< double, double, double> jointEvaluate(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
   
   double EvaulateAngleQuality(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
   
@@ -142,7 +184,8 @@ void getNeiborhoodMember(const int &numberofCenter2clusterboundary, const size_t
    */
 std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const std::vector<point3d>&LeftNeigh, const std::vector<point3d>& rightNeigh);
   
-  /**
+
+/**
    * @brief 越接近直角的特征点越被看好, 为这类特征点一些额外的奖励。
    */
   double extra_reward_from(const double &area, const double& area_min);
@@ -168,12 +211,14 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   /**
    * @brief 效果不好，删除不用
    */
-  featurePointSet  extractgfsWithoutCluster();
+  featurePointSet  extractgfsWithoutCluster()=delete;
+  
   /**
    * @brief 使用LOAM中的思想
    * @test 效果不好，删除不用 
    */
-  featurePointSet extractFeatureFromCluster(const ClusterIndices & cluster);
+  featurePointSet extractFeatureFromCluster(const ClusterIndices & cluster)=delete;
+  
   /**
    * @brief 选择一个聚类好的线条的两个端点，然后计算中间点在与这两个端点张成的面积
    * @test 效果不好，删除不用
@@ -186,8 +231,10 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   PointCloud candiate_pcd;
   KeyPoints keypoints;
 
+  KeyPoints Allkeypoints;
+  
+  
   bool IsClustering=true;
-
  
 double ratio_invariance=0.6;
 
@@ -199,24 +246,22 @@ double ratio_invariance=0.6;
  //左右邻域点最少的个数
  int min_point_num=2;
   //最小孤立特征点个数
- int alone=2;
- 
- double alone_radius=0.15;
-  
+ int alone=2; 
+ double alone_radius=0.15;  
   //NMS
-    double NMS_radius=0.2;
-    
+ double NMS_radius=0.2;    
   //区域增长, 聚类
-    uint32_t cluster_min_size=4; 
-   double region_grow_radius=10.d;
+ uint32_t cluster_min_size=4; 
+ double region_grow_radius=10.d;
   //一下三个参数用来计算邻阈半径
   float ri;
   float a=0.2;
   float b=0.07;
   
-  double minValPercent=0.2;
+  double minValPercent=0;
   
  int gridSectorsNum=36;
+ 
  
  //直角奖励系数 
  double gainClosingRightAngle=10;
@@ -229,6 +274,21 @@ double ratio_invariance=0.6;
  
  //没有使用
   int slide_window_sizes=6;
+  
+  
+  //
+  std::vector<int> Neighborhood;
+  
+ 
+  Eigen::MatrixXf GCdiscriptors;
+  
+  int dscpSectorsNum=255;
+  
+  double match_dist_thres=0.18;
+   
+  double distinct_ratio=1.15;
+  
+  double match_score_min=40;
   
 
 };

@@ -31,6 +31,7 @@
 #include <boost/concept_check.hpp>
 #include<vector>
 #include<pcl/common/common.h>
+#include "../common/math_supplement.h"
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointXYZ point3d;
@@ -48,6 +49,10 @@ struct rangeData{
 };
 
  PointCloud fromRangeData(const rangeData &ranges_data);
+ 
+ 
+rangeData fromPointCloud(const PointCloud &pcd);
+
 }
 }
 

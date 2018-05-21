@@ -105,25 +105,25 @@ void imshowPCDFromRanges(const sensor::rangeData &ranges)
   
 }
 
-void imshowPCDWithKeypoints(const std::string & name, const sensor::rangeData& ranges, const PointCloud& features )
+cv::Mat imshowPCDWithKeypoints(const std::string & name, const sensor::rangeData& ranges, const PointCloud& features )
 {
  auto max_range_Iter=std::max_element(ranges.ranges.begin(),ranges.ranges.end());
-  int width=400+*(max_range_Iter)/0.02f;//注意改为200会报错
-  //对应的还有CV_8UC1,CV_8UC2,CV_BUC3
-  cv::Mat img(cv::Size(width,width),CV_8UC3,cv::Scalar(255,255,255));  
+  int width=20+2*(*(max_range_Iter))/0.02f;//注意改为200会报错
+  //对应的还有CV_8UC1,CV_8UC2,CV_BUC3，opencv中对应为GBR
+  cv::Mat img(cv::Size(width,width),CV_8UC3,cv::Scalar(0,0,0));  
    PointCloud candidate_pcd=sensor::fromRangeData(ranges);
   for(auto point:candidate_pcd.points)
   {
     int u=img.cols/2+floor(point.x/0.02f);
     int v=img.rows/2+floor(point.y/0.02f);
-    img.at<cv::Vec3b>(v,u)=cv::Vec3b(255,0,0);
+    img.at<cv::Vec3b>(v,u)=cv::Vec3b(255,255,255);
     //img.at<uchar>(v,u)=0;
   }  
   for(point3d keypoint:features.points)
   {
     cv::Point2i point;
     point.x=img.cols/2+floor(keypoint.x/0.02f);
-    point.y=img.cols/2+floor(keypoint.y/0.02f);
+    point.y=img.rows/2+floor(keypoint.y/0.02f);
     cv::circle(img, point,5,cv::Scalar(0,0,255));
   }
   //cv::Mat img_part=img(cv::Range(500,1500),cv::Range(500,1500));
@@ -132,7 +132,44 @@ void imshowPCDWithKeypoints(const std::string & name, const sensor::rangeData& r
   cv::namedWindow(name,cv::WINDOW_AUTOSIZE);
   cv::imshow(name,img);  
   cv::waitKey();  
+  return img;
  }
+ 
+ 
+ 
+ void imshowMatch(const cv::Mat &img1,  const cv::Mat &img2, std::vector<std::pair<point3d,point3d> > pairs)
+{
+  //cv::Mat trim_img1=img1.clone();
+  int cols=img1.cols+img2.cols;  
+   int rows=std::max(img1.rows,img2.rows);
+   cv::Mat composedImg(cv::Size(cols,rows),CV_8UC3,cv::Scalar(0,0,0));
+   
+   cv::Mat img_left, img_right;
+   img_left=composedImg(cv::Rect(0,0,img1.rows,img1.cols));
+   img_right=composedImg(cv::Rect(img1.cols,0, img2.cols, img2.rows));
+  
+   img1.copyTo(img_left);
+   img2.copyTo(img_right);
+   
+   for(std::pair<point3d,point3d> pair:pairs)
+   {
+     cv::Point2i p1,p2;
+     p1.x=img1.cols/2+floor(pair.first.x/0.02); p2.x=img1.cols+img2.cols/2+floor(pair.second.x/0.02);
+     p1.y=img1.cols/2+floor(pair.first.y/0.02); p2.y=img2.cols/2+floor(pair.second.y/0.02);
+     cv::line(composedImg,p1,p2,cv::Scalar(0,255,0));     
+  }   
+
+  
+   cv::Mat dst_img;
+   cv::resize(composedImg,dst_img,cv::Size(),0.5,0.5,cv::INTER_CUBIC);
+   cv::namedWindow("match",cv::WINDOW_AUTOSIZE);
+   cv::imshow("match",dst_img);
+   cv::waitKey();    
+}
+ 
 } //viz
+
+
+
 
 }//map3d

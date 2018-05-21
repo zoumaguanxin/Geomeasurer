@@ -45,8 +45,21 @@ PointCloud fromRangeData(const rangeData& ranges_data)
    count++;    
   }  
   return ret;
-
 }
+
+rangeData fromPointCloud(const PointCloud& pcd)
+{
+  rangeData scan;
+  for(auto pk:pcd.points)
+  {
+       double range=sqrt(pow(pk.x,2)+pow(pk.y,2)+pow(pk.z,2));
+       scan.ranges.push_back(range);
+  }
+  return scan;
+}
+
+
+
 }//namespace sensor  
 }//namespace geomeasurer
 
