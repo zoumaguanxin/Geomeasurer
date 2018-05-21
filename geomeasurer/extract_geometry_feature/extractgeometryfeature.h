@@ -47,6 +47,7 @@
 #include<flirtlib/feature/InterestPoint.h>
 #include<flirtlib/sensors/LaserReading.h>
 #include<flirtlib/utils/PeakFinder.h>
+#include <pcl/kdtree/kdtree_flann.h>
 
 namespace geomeasurer
 {
@@ -131,6 +132,8 @@ private:
    */
   featurePointSet fromKeypoints();
   
+  featurePointSet fromAllkeypoints();
+  
   
   /**
    * @brief 计算每一个点应该有的邻阈的大小
@@ -195,6 +198,12 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
    */
   double computeAreaGivenEndpointCoordinates(const point3d& A1,const point3d &A2, const point3d& A3);
   
+  
+  int getCornerOrientationfromNeigh(const int& index);
+  
+  int getCornerOrientationBasedonKeypoints(const int& index);
+  
+  
   /**
    * @brief 计算面积的阈值
    * @return 返回面积的阈值
@@ -233,12 +242,14 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
 
   KeyPoints Allkeypoints;
   
+  PointCloud keypointPcd;
+  
   
   bool IsClustering=true;
  
-double ratio_invariance=0.6;
+double ratio_invariance=0.4;
 
- double min_angle=30;
+ double min_angle=45;
  
  //这个参数值实际运行时会被覆盖
  double area_min_size=0.005;
@@ -246,7 +257,7 @@ double ratio_invariance=0.6;
  //左右邻域点最少的个数
  int min_point_num=2;
   //最小孤立特征点个数
- int alone=2; 
+ int alone=1; 
  double alone_radius=0.15;  
   //NMS
  double NMS_radius=0.2;    
@@ -260,8 +271,7 @@ double ratio_invariance=0.6;
   
   double minValPercent=0;
   
- int gridSectorsNum=36;
- 
+ int gridSectorsNum=36; 
  
  //直角奖励系数 
  double gainClosingRightAngle=10;
@@ -273,8 +283,7 @@ double ratio_invariance=0.6;
  double feature_response_threshold=0.1;
  
  //没有使用
-  int slide_window_sizes=6;
-  
+  int slide_window_sizes=6;  
   
   //
   std::vector<int> Neighborhood;
@@ -289,6 +298,9 @@ double ratio_invariance=0.6;
   double distinct_ratio=1.15;
   
   double match_score_min=40;
+  
+  pcl::KdTreeFLANN<pcl::PointXYZ>  kdtree_keypoints;   
+  bool isCreatedKdtree=false;
   
 
 };

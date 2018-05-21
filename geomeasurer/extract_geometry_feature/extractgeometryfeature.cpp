@@ -723,6 +723,17 @@ featurePointSet extractGeometryFeature::fromKeypoints()
     return kp_PCD;
 }
 
+featurePointSet extractGeometryFeature::fromAllkeypoints()
+{
+    keypointPcd.clear();
+     for(auto kp:Allkeypoints)
+     {
+      keypointPcd.push_back(candiate_pcd.points[kp.index]);
+    }
+    return keypointPcd;
+}
+
+
  
 float extractGeometryFeature::getNeiborhood(const double& range)
 {  
@@ -880,112 +891,22 @@ double extractGeometryFeature::computeAreaGivenEndpointCoordinates(const point3d
 
 Discriptors extractGeometryFeature::getGCdiscriptor()
 {
+  
+    fromAllkeypoints();
     GCdiscriptors.resize(dscpSectorsNum,Allkeypoints.size()); 
     std::cout<<GCdiscriptors.rows()<<std::endl;
     std::cout<<GCdiscriptors.cols()<<std::endl;
     GCdiscriptors.setZero();
          int j=0,i=0;
     for(keypoint kp:Allkeypoints)
-    {
-      
-      double r=getNeiborhood(ranges.ranges[kp.index]);
-      std::vector<point3d> NeighL,NeighR;
-      point3d current_point=candiate_pcd.points[kp.index];
-      getNeiborhoodMember(kp.index,kp.index,r,NeighL,true);
-      getNeiborhoodMember(ranges.ranges.size()-kp.index-1,kp.index,r,NeighR, false);
-      point3d centriod;
-      centriod.x=0;centriod.y=0;centriod.z=0;
-
-      //计算左右边各自的栅格分布
-      double left_edge=0, right_edge=0;
-      for(point3d temp:NeighL)
-      {
-	double  temp_index=dscpSectorsNum/(2*M_PI)*atan2(temp.y- current_point.y,-current_point.x+temp.x);
-	  if (temp_index<0)
-	  {
-	    temp_index+=dscpSectorsNum;
-	  }
-        left_edge+=temp_index;  
-	centriod.x+=temp.x;
-	centriod.y+=temp.y;
-	centriod.z+=temp.z;
-      }
-            
-      
-      for(point3d temp:NeighR)
-      {	
-	 double  temp_index=dscpSectorsNum/(2*M_PI)*atan2(temp.y- current_point.y,-current_point.x+temp.x);
-	  if (temp_index<0)
-	  {
-	    temp_index+=dscpSectorsNum;
-	  }
-	right_edge+=temp_index;
-	centriod.x+=temp.x;
-	centriod.y+=temp.y;
-	centriod.z+=temp.z;
-      }
-      
-      
-      
-       std::cout<<"left_edeg:"<<floor(left_edge/NeighL.size())<<std::endl;
-      std::cout<<"right_edge:"<<floor(right_edge/NeighR.size())<<std::endl;
-      //计算主方向main_direction_num_new为一定程度上考虑了点云密度变化的主方向
-      int main_direction_num_new=(floor(left_edge/NeighL.size())+floor(right_edge/NeighR.size()))/2;
-      std::cout<<"main_direction_num_new:"<<main_direction_num_new<<std::endl;
-      assert(main_direction_num_new<=dscpSectorsNum);
-
-     //直接使用所谓的几何中心计算的主方向，效果明显很差 
-      centriod.x/=(NeighL.size()+NeighR.size());
-      centriod.y/=(NeighL.size()+NeighR.size()); 
-     int main_direction_num;
-    main_direction_num=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod.y-current_point.y,centriod.x-current_point.x));
-    if (main_direction_num<0)
-    {
-      main_direction_num+=dscpSectorsNum;
-    }
-      
-      //使用最近特征点，构建主方向
-      int left_endpoint_index,right_endpoint_index;
-      double dist_min, dist_second;
-      bool first=true;
-      for(keypoint kpk:Allkeypoints)
-      {
-	 if(kpk.index!=kp.index)
-	 {
-	  point3d  temppoint=candiate_pcd.points[kpk.index];
-          double dist=math::pointDistance(temppoint,current_point);
-	  if(first)
-	  {
-	    dist_min=dist;
-	    left_endpoint_index=kpk.index;
-	    first=false;
-	  }
-	 else if(dist<=dist_min)
-	  {
-	    dist_second=dist_min;
-	    right_endpoint_index=left_endpoint_index;
-	    dist_min=dist;
-	    left_endpoint_index=kpk.index;
-	  }
-	 }
-      }
-      
-      point3d left_endpoint=candiate_pcd.points[left_endpoint_index];
-      point3d right_endpoint=candiate_pcd.points[right_endpoint_index];
-       
-      point3d centriod_right;
-      centriod_right.x=(left_endpoint.x+right_endpoint.x+current_point.x)/3;
-      centriod_right.y=(left_endpoint.y+right_endpoint.y+current_point.y)/3;
-      
-     int feature_based_main_direction;
-     feature_based_main_direction=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod_right.y-current_point.y,centriod_right.x-current_point.x));
-      if (feature_based_main_direction<0)
-      {
-          feature_based_main_direction+=dscpSectorsNum;
-      }
-           
-        
+    {      
+    point3d current_point=candiate_pcd.points[kp.index];    
     
+    int Cornerorientation=getCornerOrientationfromNeigh(kp.index);
+    
+   // int Cornerorientation=getCornerOrientationBasedonKeypoints(kp.index);
+   
+
     //计算特征点在栅格内的分布
     for(keypoint kpj:Allkeypoints)
       {
@@ -1000,7 +921,7 @@ Discriptors extractGeometryFeature::getGCdiscriptor()
        {
 	 kp_sector_num+=dscpSectorsNum;
       }
-      int diff=kp_sector_num-feature_based_main_direction;
+      int diff=kp_sector_num-Cornerorientation;
       if(diff<0)
       {
 	kp_sector_num=dscpSectorsNum+diff;
@@ -1020,6 +941,90 @@ Discriptors extractGeometryFeature::getGCdiscriptor()
     }
     return GCdiscriptors;
 }
+
+int extractGeometryFeature::getCornerOrientationfromNeigh(const int& index)
+{
+    double r=getNeiborhood(ranges.ranges[index]);
+      std::vector<point3d> NeighL,NeighR;
+      point3d current_point=candiate_pcd.points[index];
+      getNeiborhoodMember(index,index,r,NeighL,true);
+      getNeiborhoodMember(ranges.ranges.size()-index-1,index,r,NeighR, false);
+      
+      point3d centriod, centriod_left, centriod_right;
+      centriod.x=0;centriod.y=0;centriod.z=0;
+      centriod_left.x=0;centriod_left.y=0;centriod_left.z=0;
+      centriod_right.x=0;centriod_right.y=0;centriod_right.z=0;
+
+      //计算左右边各自的栅格分布
+      double left_edge=0, right_edge=0;
+      for(point3d temp:NeighL)
+      {
+	centriod_left.x+=temp.x;
+	centriod_left.y+=temp.y;
+	centriod_left.z+=temp.z;
+      }
+      centriod_left.x/=NeighL.size();      
+      centriod_left.y/=NeighL.size();
+      int Orientation_l=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod_left.y-current_point.y,centriod_left.x-current_point.x));
+      if(Orientation_l<0)
+      {
+	Orientation_l+=dscpSectorsNum;
+      }
+      
+      for(point3d temp:NeighR)
+      {
+	centriod_right.x+=temp.x;
+	centriod_right.y+=temp.y;
+	centriod_right.z+=temp.z;
+      }
+      centriod_right.x/=NeighR.size();
+      centriod_right.y/=NeighR.size();
+      int Orientation_r=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod_right.y-current_point.y,centriod_right.x-current_point.x));
+      if(Orientation_r<0)
+      {
+	Orientation_r+=dscpSectorsNum;
+      }    
+     
+      int Cornerorientation=1/2*(Orientation_l+Orientation_r);
+      if ((abs(Orientation_l-Cornerorientation)+abs(Orientation_r-Cornerorientation))>(dscpSectorsNum/2.d))
+      {
+         Cornerorientation=(Cornerorientation+dscpSectorsNum/2)%dscpSectorsNum;
+      }
+      return Cornerorientation;
+}
+
+
+int extractGeometryFeature::getCornerOrientationBasedonKeypoints(const int & index)
+{  
+      int left_endpoint_index,right_endpoint_index;
+      point3d current_point=candiate_pcd.points[index];
+      double dist_min, dist_second;
+      bool first=true;
+     if(!isCreatedKdtree)
+     { 
+      kdtree_keypoints.setInputCloud(keypointPcd.makeShared());
+      isCreatedKdtree=true;
+     }
+      
+       size_t K=3;
+       std:: vector<int> pointIdxNKNSearch(K);//用来存放搜索到的点的index
+       std::vector<float> pointNKNSquaredDistance(K);//存放搜索到的点到当前的欧式距离
+       kdtree_keypoints.nearestKSearch(current_point,K,pointIdxNKNSearch,pointNKNSquaredDistance);
+       left_endpoint_index=pointIdxNKNSearch[1];
+       right_endpoint_index=pointIdxNKNSearch[2];    
+      point3d left_endpoint=keypointPcd.points[left_endpoint_index];
+      point3d right_endpoint=keypointPcd.points[right_endpoint_index];
+      point3d centriod;
+      centriod.x=(left_endpoint.x+right_endpoint.x+current_point.x)/3;
+      centriod.y=(left_endpoint.y+right_endpoint.y+current_point.y)/3;      
+     int Cornerorientation=floor(dscpSectorsNum/(2*M_PI)*atan2(centriod.y-current_point.y,centriod.x-current_point.x));
+      if (Cornerorientation<0)
+      {
+         Cornerorientation+=dscpSectorsNum;
+      }
+      return Cornerorientation;
+}
+
 
 
 std::vector<std::tuple< int, int, double > > extractGeometryFeature::match(const KeyPoints& kps, const Discriptors& GCS)
