@@ -31,7 +31,7 @@
 #include <boost/concept_check.hpp>
 #include<vector>
 #include<pcl/common/common.h>
-#include "../common/math_supplement.h"
+
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointXYZ point3d;
