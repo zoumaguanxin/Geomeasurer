@@ -199,8 +199,15 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   double computeAreaGivenEndpointCoordinates(const point3d& A1,const point3d &A2, const point3d& A3);
   
   
+  /**
+   * @brief 基于邻域点计算主方向（实际采用计算角平分线）
+   */
   int getCornerOrientationfromNeigh(const int& index);
   
+  
+  /**
+   * @brief 基于特征点计算主方向
+   */
   int getCornerOrientationBasedonKeypoints(const int& index);
   
   
@@ -239,17 +246,16 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   sensor::rangeData ranges;
   PointCloud candiate_pcd;
   KeyPoints keypoints;
-
-  KeyPoints Allkeypoints;
-  
+  KeyPoints Allkeypoints;  
   PointCloud keypointPcd;
-  
+  pcl::KdTreeFLANN<pcl::PointXYZ>  kdtree_keypoints;   
+  bool isCreatedKdtree=false;
   
   bool IsClustering=true;
  
-double ratio_invariance=0.4;
+double ratio_invariance=0.6;
 
- double min_angle=45;
+ double min_angle=30;
  
  //这个参数值实际运行时会被覆盖
  double area_min_size=0.005;
@@ -291,18 +297,15 @@ double ratio_invariance=0.4;
  
   Eigen::MatrixXf GCdiscriptors;
   
-  int dscpSectorsNum=255;
+  int dscpSectorsNum=144;//144, 288
   
   double match_dist_thres=0.18;
    
-  double distinct_ratio=1.15;
+  double distinct_ratio=1.0;
   
   double match_score_min=40;
   
-  pcl::KdTreeFLANN<pcl::PointXYZ>  kdtree_keypoints;   
-  bool isCreatedKdtree=false;
-  
-
+  bool keypoints_based_method=false;
 };
 
 }

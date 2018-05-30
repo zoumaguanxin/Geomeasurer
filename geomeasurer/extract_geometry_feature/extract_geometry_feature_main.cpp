@@ -31,20 +31,15 @@ int main()
     featurePointSet featurePoints=gfs.extractgfs("IFAKLO");
     end_t=std::clock();
     std::cout<<"DALKO run time:"<<double(end_t-begin_t)/CLOCKS_PER_SEC<<std::endl;
-    //featurePointSet featurePoints_falko=gfs.extractgfs("FAKLO"); 
+
 
     
     
 
     cv::Mat img1,img2;
-    img1=viz::imshowPCDWithKeypoints("ifaklo", ranges,featurePoints);
+    img1=viz::imshowPCDWithKeypoints("ifaklo", ranges,featurePoints);    
     
-    
-     
-    // viz::imshowPCDWithKeypoints("faklo",ranges,featurePoints_falko);
-    
-    
-     img2=viz::imshowPCDWithKeypoints("p1",ranges1,featurepoints1);
+   img2=viz::imshowPCDWithKeypoints("p1",ranges1,featurepoints1);
      
     
      Discriptors GC=gfs.getGCdiscriptor();

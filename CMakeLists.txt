@@ -21,7 +21,7 @@ message("include directory:${CMAKE_SOURCE_DIR}")
 
 message("${CMAKE_INCLUDE_CURRENT_DIR}") 
 
-set(LIB_SRC geomeasurer/common/math_supplement.cpp geomeasurer/extract_geometry_feature/extractgeometryfeature.cpp geomeasurer/sensor/scan_data.cpp geomeasurer/io/scan_reader.cpp)
+set(LIB_SRC geomeasurer/transform/pose2d.cpp geomeasurer/common/math_supplement.cpp geomeasurer/extract_geometry_feature/extractgeometryfeature.cpp geomeasurer/sensor/scan_data.cpp geomeasurer/io/scan_reader.cpp)
 
 #add_library(gfs ${LIB_SRC})
 
@@ -31,11 +31,17 @@ set(LIB_SRC geomeasurer/common/math_supplement.cpp geomeasurer/extract_geometry_
 
 add_executable(testgfs geomeasurer/extract_geometry_feature/extract_geometry_feature_main.cpp ${LIB_SRC})
 
+add_executable(test_falko geomeasurer/extract_geometry_feature/FAKLO_test.cpp  ${LIB_SRC})
+
+add_executable(dalko_testlog geomeasurer/extract_geometry_feature/dalko_testlog.cpp  ${LIB_SRC})
+
 #target_link_libraries(testgeomeasurer ${PCL_LIBRARIES})
 
 #target_link_libraries(testgfs gfs)
 
 target_link_libraries(testgfs ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
+target_link_libraries(test_falko ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
+target_link_libraries(dalko_testlog ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
 
 #install(TARGETS testgeomeasurer RUNTIME DESTINATION bin)
 

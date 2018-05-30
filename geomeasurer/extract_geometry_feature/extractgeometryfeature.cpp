@@ -901,11 +901,11 @@ Discriptors extractGeometryFeature::getGCdiscriptor()
     for(keypoint kp:Allkeypoints)
     {      
     point3d current_point=candiate_pcd.points[kp.index];    
-    
-    int Cornerorientation=getCornerOrientationfromNeigh(kp.index);
-    
-   // int Cornerorientation=getCornerOrientationBasedonKeypoints(kp.index);
    
+    int Cornerorientation;
+    if(!keypoints_based_method)
+    { Cornerorientation=getCornerOrientationfromNeigh(kp.index);}
+    else {Cornerorientation=getCornerOrientationBasedonKeypoints(kp.index);}  
 
     //计算特征点在栅格内的分布
     for(keypoint kpj:Allkeypoints)
