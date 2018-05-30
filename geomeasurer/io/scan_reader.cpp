@@ -34,6 +34,37 @@ namespace geomeasurer
 {
   namespace io 
   {
+    
+    std::istream& operator >> (std::istream &in, pose2dStamped& tempose)
+    {      
+    in>>tempose.head.name>>tempose.head.number>>tempose.x>>tempose.y>>tempose.theta;
+    return in;
+    }
+    
+    std::istream& operator >> (std::istream & file, sensor::rangeData & range_data)
+    {      
+       std::string lasername;
+       file>>lasername;
+       file.seekg(2,std::ios::cur);
+       file>>range_data.angle_min;
+       double angle_range;
+       file>>angle_range;
+       range_data.angle_max=angle_range+range_data.angle_min;
+       file>>range_data.angle_increment>>range_data.maxRange;
+      file.seekg(3,std::ios::cur);
+       int num; file>>num;
+       range_data.ranges.reserve(num);
+       
+       for(int i=0;i<180;i++)
+       {
+	 double range;
+	 file>>range;
+	 range_data.ranges.emplace_back(range);
+      }
+      file.seekg(10,std::ios::cur);
+      return file;
+    }
+    
 sensor::rangeData fromFile(const std::string& filedir)
 {
      sensor::rangeData ret_range_data;
@@ -58,6 +89,36 @@ sensor::rangeData fromFile(const std::string& filedir)
     file.close();
     return ret_range_data;
 }
+
+
+
+RangesCorrespondingtoposes fromlogfile(const std::string& filedir)
+{
+     std::ifstream file;
+     RangesCorrespondingtoposes rcps;
+     file.open(filedir.c_str(), std::ios_base::in);
+     if(file.good())
+     {     
+	while(file.good())
+	{  
+	  sensor::rangeData range_data;
+	  pose2dStamped tempose;  
+	  file>>tempose;
+	  file>> range_data;
+	  rangeWithpose rwp(tempose,range_data);
+	  rcps.push_back(rwp);
+	}
+    }
+    else
+    {
+      ::std::cout<<"can not open the file in the specified directory"<<::std::endl;
+      using namespace std;
+     assert(file.good());
+    }
+    file.close();
+    return rcps;
+}
+
     
   }// namespace io
 }//namespace geomeasurer

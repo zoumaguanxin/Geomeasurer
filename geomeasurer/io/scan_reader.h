@@ -29,6 +29,7 @@
 #ifndef SCAN_READER_H
 #define SCAN_READER_H
 #include "../sensor/scan_data.h"
+#include "../transform/pose2d.h"
 #include<cstring>
 #include<fstream>
 #include<cassert>
@@ -36,7 +37,11 @@ namespace geomeasurer
 {
   namespace io
   {
-    sensor::rangeData fromFile(const std::string & filedir);        
+    using namespace sensor;
+    std::istream& operator >> (std::istream &in, pose2dStamped & tempose);
+    std::istream& operator >> (std::istream & file, sensor::rangeData & range_data);    
+    sensor::rangeData fromFile(const std::string & filedir); 
+   RangesCorrespondingtoposes fromlogfile(const std::string & filedir);
   }
 }
 
