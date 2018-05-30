@@ -31,10 +31,13 @@
 #include <boost/concept_check.hpp>
 #include<vector>
 #include<pcl/common/common.h>
+#include"../transform/pose2d.h"
 
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointXYZ point3d;
+
+
 
 namespace geomeasurer
 {
@@ -43,15 +46,24 @@ namespace geomeasurer
 
 struct rangeData{
   double angle_increment;
+  double maxRange;
   double angle_min;
   double angle_max;
  std:: vector<double> ranges;
 };
 
- PointCloud fromRangeData(const rangeData &ranges_data);
- 
- 
+struct laserAbstract{
+  std::string name;
+  
+};
+
+typedef std::vector<std::pair<pose2dStamped, sensor::rangeData>> RangesCorrespondingtoposes;
+typedef std::pair<pose2dStamped, sensor::rangeData> rangeWithpose;
+
+PointCloud fromRangeData(const rangeData &ranges_data);  
 rangeData fromPointCloud(const PointCloud &pcd);
+
+
 
 }
 }
