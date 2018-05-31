@@ -42,6 +42,8 @@ namespace geomeasurer{
 
     double pointDistance(const point3d& p1, const point3d &p2);
     
+    double rangefromcartesian(const point3d& p1);
+    
    
   }
   

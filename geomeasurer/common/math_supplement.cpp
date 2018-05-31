@@ -66,6 +66,12 @@ double pointDistance(const point3d& p1, const point3d& p2)
   return ret_dist;
 }
 
+double rangefromcartesian(const point3d& p1)
+{
+   return double(sqrt(pow(p1.x,2)+pow(p1.y,2)+pow(p1.z,2)));
+}
+
+
    
    
   }// namspace math  
