@@ -37,7 +37,9 @@ namespace geomeasurer
     
     std::istream& operator >> (std::istream &in, pose2dStamped& tempose)
     {      
-    in>>tempose.head.name>>tempose.head.number>>tempose.x>>tempose.y>>tempose.theta;
+    in>>tempose.head.name;
+
+    in>>tempose.head.number>>tempose.x>>tempose.y>>tempose.theta;
     return in;
     }
     
@@ -45,23 +47,36 @@ namespace geomeasurer
     {      
        std::string lasername;
        file>>lasername;
-       file.seekg(2,std::ios::cur);
+        
+       int num0; file>>num0;
+       //file.seekg(2,std::ios::cur);
        file>>range_data.angle_min;
        double angle_range;
        file>>angle_range;
        range_data.angle_max=angle_range+range_data.angle_min;
        file>>range_data.angle_increment>>range_data.maxRange;
-      file.seekg(3,std::ios::cur);
+       double t1,t2;
+       file>>t1>>t2;
+       //  file.seekg(3,std::ios::cur);//这样不行，因为3指定的是字节，而每一位数的字节情况不一定。通用的处理是直接都处理成String
        int num; file>>num;
-       range_data.ranges.reserve(num);
-       
+      //range_data.ranges.reserve(num);
+      //file.seekg(4,std::ios::cur);
        for(int i=0;i<180;i++)
        {
 	 double range;
 	 file>>range;
 	 range_data.ranges.emplace_back(range);
       }
-      file.seekg(10,std::ios::cur);
+      for(int i=0;i<13;i++)
+      {
+	double tem;
+	file>>tem;
+      }
+            for(int i=0;i<3;i++)
+	    {
+		std::string endstring; 
+	      file>>endstring;
+	    }    
       return file;
     }
     

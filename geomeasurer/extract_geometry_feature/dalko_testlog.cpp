@@ -22,16 +22,34 @@ int main()
    rcps=io::fromlogfile(logfiledir);
    
    
+  for(int iter=0;iter<rcps.size()-1;iter++)
+  {
+   
+  sensor::rangeData ranges,ranges1;  
+  ranges=rcps[iter].second;
+  ranges1=rcps[iter+1].second;  
+  std::cout<<ranges.angle_increment<<" "<<ranges.angle_min<<" "<<ranges.angle_max<<" "<<ranges.maxRange<<std::endl;  
+  std::cout<<ranges.ranges.size()<<std::endl;  
+  for(auto range:ranges.ranges)
+  {
+    std::cout<<range<<" ";
+  }  
   
-   sensor::rangeData ranges,ranges1;
   
-  ranges=rcps[0].second;
-  ranges1=rcps[1].second;
-  extractGeometryFeature gfs(ranges);
-  extractGeometryFeature gfs1(ranges1);
+  std::cout<<std::endl;   
+  std::cout<<ranges1.angle_increment<<" "<<ranges1.angle_min<<" "<<ranges1.angle_max<<" "<<ranges1.maxRange<<std::endl;  
+  std::cout<<ranges1.ranges.size()<<std::endl;  
+  for(auto range:ranges1.ranges)
+  {
+    std::cout<<range<<" ";
+  }
+  
+    std::cout<<std::endl;
+    extractGeometryFeature gfs(ranges);
+    extractGeometryFeature gfs1(ranges1);
     gfs.setRegionGrowRadius(0.2);
-   gfs1.setRegionGrowRadius(0.2);
-   featurePointSet featurepoints1=gfs1.extractgfs("IFAKLO");
+    gfs1.setRegionGrowRadius(0.2);
+    featurePointSet featurepoints1=gfs1.extractgfs("IFAKLO");
     std::time_t begin_t,end_t;
     begin_t=std::clock();
     featurePointSet featurePoints=gfs.extractgfs("IFAKLO");
@@ -43,9 +61,8 @@ int main()
     
 
     cv::Mat img1,img2;
-    img1=viz::imshowPCDWithKeypoints("ifaklo", ranges,featurePoints);    
-    
-   img2=viz::imshowPCDWithKeypoints("p1",ranges1,featurepoints1);
+    img1=viz::imshowPCDWithKeypoints("ifaklo", ranges,featurePoints);        
+    img2=viz::imshowPCDWithKeypoints("p1",ranges1,featurepoints1);
      
     
      Discriptors GC=gfs.getGCdiscriptor();
@@ -74,7 +91,7 @@ int main()
     
     viz::imshowMatch(img1,img2,kppairs);
      
-     
+  }  
      
      
 

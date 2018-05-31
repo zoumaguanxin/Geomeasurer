@@ -986,7 +986,7 @@ int extractGeometryFeature::getCornerOrientationfromNeigh(const int& index)
       }    
      
       int Cornerorientation=1/2*(Orientation_l+Orientation_r);
-      if ((abs(Orientation_l-Cornerorientation)+abs(Orientation_r-Cornerorientation))>(dscpSectorsNum/2.d))
+      if ((distanceofSectors(Orientation_l,Cornerorientation)+distanceofSectors(Orientation_r,Cornerorientation))>(dscpSectorsNum/2.d))
       {
          Cornerorientation=(Cornerorientation+dscpSectorsNum/2)%dscpSectorsNum;
       }
@@ -1025,6 +1025,12 @@ int extractGeometryFeature::getCornerOrientationBasedonKeypoints(const int & ind
       return Cornerorientation;
 }
 
+
+int extractGeometryFeature::distanceofSectors(const int& index1, const int& index2)
+{
+    int fyb=abs(int(abs(index1-index2)+dscpSectorsNum/2.f)%dscpSectorsNum-dscpSectorsNum/2);
+    return fyb;
+}
 
 
 std::vector<std::tuple< int, int, double > > extractGeometryFeature::match(const KeyPoints& kps, const Discriptors& GCS)

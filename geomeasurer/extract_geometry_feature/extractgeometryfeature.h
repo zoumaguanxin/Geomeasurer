@@ -211,6 +211,9 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   int getCornerOrientationBasedonKeypoints(const int& index);
   
   
+  int distanceofSectors(const int &index1, const int & index2);
+  
+  
   /**
    * @brief 计算面积的阈值
    * @return 返回面积的阈值
