@@ -1,6 +1,7 @@
 #include <boost/thread/thread.hpp>
 #include <pcl/visualization/pcl_visualizer.h>
 #include "../sensor/scan_data.h"
+#include "../common/math_supplement.h"
 #include<opencv2/highgui/highgui.hpp>
 #include<opencv2/imgproc/imgproc.hpp>
 #include<opencv2//core/core.hpp>
@@ -108,23 +109,31 @@ void imshowPCDFromRanges(const sensor::rangeData &ranges)
 cv::Mat imshowPCDWithKeypoints(const std::string & name, const sensor::rangeData& ranges, const PointCloud& features )
 {
  auto max_range_Iter=std::max_element(ranges.ranges.begin(),ranges.ranges.end());
-  int width=20+2*(*(max_range_Iter))/0.02f;//注意改为200会报错
+ double max_range=15;
+ 
+ // int width=20+2*(*(max_range_Iter))/0.02f;
+ int width=20+2*(max_range)/0.02f;
   //对应的还有CV_8UC1,CV_8UC2,CV_BUC3，opencv中对应为GBR
   cv::Mat img(cv::Size(width,width),CV_8UC3,cv::Scalar(0,0,0));  
    PointCloud candidate_pcd=sensor::fromRangeData(ranges);
   for(auto point:candidate_pcd.points)
   {
-    int u=img.cols/2+floor(point.x/0.02f);
-    int v=img.rows/2+floor(point.y/0.02f);
-    img.at<cv::Vec3b>(v,u)=cv::Vec3b(255,255,255);
+    if(math::rangefromcartesian(point)<max_range)
+    {
+      int u=img.cols/2+floor(point.x/0.02f);
+      int v=img.rows/2+floor(point.y/0.02f);
+      img.at<cv::Vec3b>(v,u)=cv::Vec3b(255,255,255);
+    }
     //img.at<uchar>(v,u)=0;
   }  
   for(point3d keypoint:features.points)
   {
+    if(math::rangefromcartesian(keypoint)<max_range){
     cv::Point2i point;
     point.x=img.cols/2+floor(keypoint.x/0.02f);
     point.y=img.rows/2+floor(keypoint.y/0.02f);
     cv::circle(img, point,5,cv::Scalar(0,0,255));
+    }
   }
   //cv::Mat img_part=img(cv::Range(500,1500),cv::Range(500,1500));
   cv::Mat dst_img;
