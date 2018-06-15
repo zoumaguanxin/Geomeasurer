@@ -26,88 +26,19 @@
  * 
  */
 
-#include "pose2d.h"
+#ifndef TRANSFORM_H
+#define TRANSFORM_H
 
-#include <iostream>
+#include<pcl/point_cloud.h>
+#include<pcl/common/common.h>
+#include <eigen3/Eigen/Dense>
 
-pose2d::pose2d(const double& x_, const double& y_, const double& theta_)
-{
-   x=x_;
-   y=y_;
-   theta=theta_;
-}
-
-
-double pose2d::getx()
-{
-  return x;
-}
-
-double pose2d::gety()
-{
-  return y;
-}
-
-double pose2d::gettheta()
-{
-  return theta;
-}
-
-Eigen::Matrix3f pose2d::getRoationMatrix() const
-{
-  //不使用中间变量R时, 直接return时报错
-   Eigen::Matrix3f R;
-    R=Eigen::AngleAxisf(float(theta),Eigen::Vector3f::UnitZ());
-    return R;
-}
-
-Eigen::Vector3f pose2d::getVec3f() const
-{  
-return Eigen::Vector3f(x,y,0.d);
-}
-
-pose2d getPoseEdge(const pose2d& p_ref, const pose2d& p_src)
-{
+namespace geomeasurer{
   
+  
+     void transformpcd(const pcl::PointCloud<pcl::PointXYZ>::Ptr src_pcp, pcl::PointCloud<pcl::PointXYZ>::Ptr dst_pcp,const Eigen::Vector3f &tranlsation, const Eigen::Matrix3f &Rotation);
 
-   Eigen::Matrix3f R_ref=p_ref.getRoationMatrix(); 
-   Eigen::Matrix3f R_src=p_src.getRoationMatrix();   
-   
-   Eigen::Matrix3f R_ref_src=R_ref.transpose()*R_src;
-   
-   Eigen::Vector3f t_ref=p_ref.getVec3f();
-   Eigen::Vector3f t_src=p_src.getVec3f();
-    
-   Eigen::Vector3f t_src_ref=R_ref.transpose()*(t_src-t_ref);
-   
-   Eigen::Quaternion<float> q(R_ref_src);
-   
-     Eigen::Vector3f v;
-	//以下的处理非常重要，只适用于只存在偏航角的情况
-	float a1=acos(q.w());
-	float a2=-a1;
-	if(abs(sin(a1)-q.z())<0.001f)
-	{
-	  v(2)=2*a1;
-
-	}
-	else if(abs(sin(a2)-q.z())<0.001f)
-	{
-	  v(2)=2*a2;
-	  //cout<<v(2)<<endl;
-	}
-	else{
-	std::cout<<"四元数解析错误，该旋转轴不为z轴"<<std::endl;
-	  exit(0);
-	}
-
-    v(1)=t_src_ref(1);
-    v(0)=t_src_ref(0);
-    pose2d pose(v(0),v(1),v(2));
-    return pose;   
-   
+  
 }
 
-
-
-
+#endif // TRANSFORM_H

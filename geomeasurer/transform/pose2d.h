@@ -32,6 +32,7 @@
 #include <boost/graph/graph_concepts.hpp>
 #include<eigen3/Eigen/Dense>
 
+class pose;
 struct header{
   double time;
   double frame;
@@ -50,8 +51,9 @@ class pose2d
   double gettheta();
   pose2d(){}
   pose2d(const double &x_, const double &y_, const double &theta_);
-  Eigen::Matrix3f getRoationMatrix();
-  Eigen::Vector3f getVec3f(); 
+  
+  Eigen::Matrix3f getRoationMatrix() const;
+  Eigen::Vector3f getVec3f() const; 
   ~pose2d(){}
 };
 
@@ -61,8 +63,11 @@ class pose2dStamped:public pose2d
   header head;
   pose2dStamped():pose2d(){}
   pose2dStamped(const double& x_, const double& y_, const double& theta_):pose2d(x_,y_,theta_)
-  {}
+    {}
+
 ~pose2dStamped(){}  
 };
+
+pose2d getPoseEdge(const pose2d& p_ref, const pose2d& p_src);
 
 #endif // POSE2D_H
