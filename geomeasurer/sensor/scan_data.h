@@ -33,6 +33,8 @@
 #include<pcl/common/common.h>
 #include"../transform/pose2d.h"
 
+#include<pcl/kdtree/kdtree_flann.h>
+
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointXYZ point3d;
@@ -44,12 +46,18 @@ namespace geomeasurer
   namespace sensor
   {
 
-struct rangeData{
+class rangeData{
+public:
+  rangeData(){}
+  rangeData(const double & angle_increment_,const double &maxRange_,const double& angle_min_,const double& angle_max_):
+  angle_increment(angle_increment_),maxRange(maxRange_),angle_min(angle_min_),angle_max(angle_max_){}
   double angle_increment;
   double maxRange;
   double angle_min;
   double angle_max;
  std:: vector<double> ranges;
+ int getIndexbyPoint(const point3d & point);
+ PointCloud getpcdfromscan();
 };
 
 struct laserAbstract{

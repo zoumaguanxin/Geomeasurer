@@ -28,7 +28,8 @@
 
 #include "scan_data.h"
 namespace geomeasurer {
-  namespace sensor {
+  namespace sensor {    
+
     
 PointCloud fromRangeData(const rangeData& ranges_data)
 {
@@ -56,6 +57,35 @@ rangeData fromPointCloud(const PointCloud& pcd)
        scan.ranges.push_back(range);
   }
   return scan;
+}
+
+
+int rangeData::getIndexbyPoint(const point3d& point)
+{
+   pcl::KdTreeFLANN<point3d> kdtree;
+   assert(!ranges.empty());
+   PointCloud tempcd=getpcdfromscan();
+   kdtree.setInputCloud(tempcd.makeShared());
+   int k=1;std::vector<int> indexes;std::vector<float> squaredDistances;
+   kdtree.nearestKSearch(point,1,indexes,squaredDistances);
+   return indexes[0];
+}
+
+PointCloud rangeData::getpcdfromscan()
+{
+  PointCloud ret;
+  double angle;
+  int count=0;
+  for(auto range : ranges)
+  {
+    angle=angle_min+count*angle_increment;
+    point3d temPoint;
+    temPoint.x=range*cos(angle);
+    temPoint.y=range*sin(angle);
+    ret.push_back(temPoint);
+   count++;    
+  }  
+  return ret;
 }
 
 
