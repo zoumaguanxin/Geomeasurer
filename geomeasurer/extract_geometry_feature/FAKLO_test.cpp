@@ -5,7 +5,7 @@
 #include<flirtlib/feature/RangeDetector.h>
 #include"extractgeometryfeature.h"
 #include "opencv/highgui.h"
-#include "../viz/viz.hpp"
+#include "../viz/viz.h"
 
 
 

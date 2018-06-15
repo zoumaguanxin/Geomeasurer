@@ -49,8 +49,16 @@
 #include<flirtlib/utils/PeakFinder.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
+
+  #define DAL_DEBUG false
+
+  #define DALKO_DEBUG(msg) if(DAL_DEBUG) std::cout<<msg
+
+
+
 namespace geomeasurer
 {
+
   class keypoint
   {
   public:
@@ -85,7 +93,22 @@ public:
   void setGridSetorNum(const int gridSectorsNum_);
   void setMinNeighNum(const int &min_point_num_);
   void setMinAloneNum(const int &alone_);
-  
+  void setDesSectorNum(const int & dscpSectorsNum_);  
+  void setMatchDistThres(const double & match_dist_thres_);
+  void setMatchDistinctRatio(const double distinct_ratio_);
+  void setMatchMinScore(const double match_score_min_);
+  void ChooseMethodofComputingOrientation(const bool & keypoints_based_method_);
+//     int dscpSectorsNum=144;//144, 288
+//   
+//   double match_dist_thres=0.18;
+//    
+//   double distinct_ratio=1.0;
+//   
+//   double match_score_min=40;
+//   
+//   bool keypoints_based_method=false;
+//   
+  void setInputRanges(const sensor::rangeData & ranges_);
   featurePointSet extractgfs(std::string T);
   featurePointSet extractFAKLO();
   featurePointSet extractCornerWithAreaTsensor(const ClusterIndices &cluster);
@@ -112,6 +135,8 @@ public:
 private:
 
 
+  void clear();
+  
   /**
    * @brief 孤立特征点抑制
    * @return 抑制后特征点构成的点云
@@ -211,8 +236,7 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   int getCornerOrientationBasedonKeypoints(const int& index);
   
   
-  int distanceofSectors(const int &index1, const int & index2);
-  
+  int distanceofSectors(const int &index1, const int & index2);  
   
   /**
    * @brief 计算面积的阈值
@@ -243,6 +267,15 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
    * @test 效果不好，删除不用
    */
   featurePointSet extractfromTensorField(const ClusterIndices &cluster);
+  
+  
+  /**
+   * @brief 自适应的调整响应因子
+   * @param[in] ri 当前点的距离
+   * @return 返回响应因子
+   */
+  
+  double adaptiveResponsefactor(const double & ri);
 
 
 
@@ -252,6 +285,9 @@ std::pair<double,double> EvaulateInvarianceNeigh(const point3d &center, const st
   KeyPoints Allkeypoints;  
   PointCloud keypointPcd;
   pcl::KdTreeFLANN<pcl::PointXYZ>  kdtree_keypoints;   
+
+  
+  
   bool isCreatedKdtree=false;
   
   bool IsClustering=true;
@@ -264,7 +300,7 @@ double ratio_invariance=0.6;
  double area_min_size=0.005;
  
  //左右邻域点最少的个数
- int min_point_num=2;
+ int min_point_num=1;
   //最小孤立特征点个数
  int alone=1; 
  double alone_radius=0.15;  
@@ -272,7 +308,7 @@ double ratio_invariance=0.6;
  double NMS_radius=0.2;    
   //区域增长, 聚类
  uint32_t cluster_min_size=4; 
- double region_grow_radius=10.d;
+ double region_grow_radius=0.2;
   //一下三个参数用来计算邻阈半径
   float ri;
   float a=0.2;
@@ -295,7 +331,7 @@ double ratio_invariance=0.6;
   int slide_window_sizes=6;  
   
   //
-  std::vector<int> Neighborhood;
+
   
  
   Eigen::MatrixXf GCdiscriptors;

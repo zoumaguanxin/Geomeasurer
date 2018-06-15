@@ -29,6 +29,8 @@
 #include "extractgeometryfeature.h"
 #include <boost/graph/graph_concepts.hpp>
 
+
+
 namespace geomeasurer {
   
 keypoint::keypoint()
@@ -84,6 +86,75 @@ void extractGeometryFeature::setClusterMinSize(const uint32_t& cluster_min_size_
 }
 
 
+void extractGeometryFeature::setMinAloneNum(const int& alone_)
+{
+  alone=alone_;
+}
+
+void extractGeometryFeature::setMinIncludedAngle(const double min_angle_)
+{
+  min_angle=min_angle_;
+}
+
+void extractGeometryFeature::setNeigh_a(const double& a_)
+{
+  a=a_;
+}
+
+void extractGeometryFeature::setNeigh_b(const double& b_)
+{
+  b=b_;
+}
+
+void extractGeometryFeature::setIsClustering(const bool& IsClustering_)
+{
+  IsClustering=IsClustering_;
+}
+
+void extractGeometryFeature::setMinNeighNum(const int& min_point_num_)
+{
+  min_point_num=min_point_num_;
+}
+
+void extractGeometryFeature::setNMSRadius(const double& NMS_radius_)
+{
+ NMS_radius=NMS_radius_;
+}
+
+void extractGeometryFeature::setGridSetorNum(const int gridSectorsNum_)
+{
+  gridSectorsNum=gridSectorsNum_;
+}
+
+void extractGeometryFeature::ChooseMethodofComputingOrientation(const bool& keypoints_based_method_)
+{
+  keypoints_based_method=keypoints_based_method_;
+}
+
+void extractGeometryFeature::setDesSectorNum(const int& dscpSectorsNum_)
+{
+  dscpSectorsNum=dscpSectorsNum_;
+}
+
+void extractGeometryFeature::setMatchDistinctRatio(const double distinct_ratio_)
+{
+  distinct_ratio=distinct_ratio_;
+}
+
+void extractGeometryFeature::setMatchDistThres(const double& match_dist_thres_)
+{
+  match_dist_thres=match_dist_thres_;
+}
+
+void extractGeometryFeature::setMatchMinScore(const double match_score_min_)
+{
+  match_score_min=match_score_min_;
+}
+
+
+
+
+
 
 std::vector< pcl::PointIndices > extractGeometryFeature::EuclideanClusterExtraction() const
 {
@@ -102,7 +173,7 @@ std::vector< pcl::PointIndices > extractGeometryFeature::EuclideanClusterExtract
     else
     {
       double dist=math::pointDistance(bound_point,point);
-      //std::cout<<"distance:"<<dist<<std::endl;
+      DALKO_DEBUG("distance:"<<dist<<std::endl);
       bound_point=point;
           if(dist<region_grow_radius)
 	  {
@@ -111,7 +182,7 @@ std::vector< pcl::PointIndices > extractGeometryFeature::EuclideanClusterExtract
 	   }
 	  else
 	  {
-	    std::cout<<"发现一个新的类,其尺寸为："<<cluster_indices.indices.size()<< std::endl;
+	    DALKO_DEBUG("发现一个新的类,其尺寸为："<<cluster_indices.indices.size()<< std::endl);
 	     ret.emplace_back(cluster_indices);
 	     cluster_indices.indices.clear();
 	     cluster_indices.indices.emplace_back(indice);
@@ -121,6 +192,14 @@ std::vector< pcl::PointIndices > extractGeometryFeature::EuclideanClusterExtract
   }
   ret.emplace_back(cluster_indices);
   return ret;
+}
+
+
+
+void extractGeometryFeature::setInputRanges(const sensor::rangeData& ranges_)
+{
+    candiate_pcd=sensor::fromRangeData(ranges_);
+   ranges=ranges_;
 }
 
 
@@ -315,7 +394,11 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     
     //计算左右邻域
     double Neigh_Radius=getNeiborhood(ranges.ranges[cluster.indices[i]]);
-     std::cout<<"Neigh_R:"<<Neigh_Radius<<std::endl;
+    
+    ratio_invariance=adaptiveResponsefactor(Neigh_Radius);
+    
+    DALKO_DEBUG("Neigh_R:"<<Neigh_Radius<<std::endl);
+
     double numofcenter2clusterboundary;
     numofcenter2clusterboundary=i;
     getNeiborhoodMember(numofcenter2clusterboundary, cluster.indices[i],Neigh_Radius, NeighL,true);
@@ -341,8 +424,6 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     point3d x_R=candiate_pcd.points[cluster.indices[i+NeighR.size()]];
 
    //double area=computeAreaGivenEndpointCoordinates(point_i,x_L,x_R); 
-     
-
    // double edg1=math::pointDistance(point_i, x_L);
    // double edg2=math::pointDistance(point_i, x_R);
     
@@ -351,7 +432,7 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
     //****************************************
     //直接使用面积作为响应
    //****************************************
-/*    
+    /*    
     area_min_size=getAreaThres(edg1,edg2);
     std::cout<<"area_min_size: "<<area_min_size<<std::endl;
    if(area>area_min_size)*/
@@ -383,18 +464,18 @@ featurePointSet extractGeometryFeature::extractCornerWithimprovedFAKLO(const Clu
 	// double AngleInvarianceScore=EvaulateAngleQuality(point_i,NeighL,NeighR);
 	//score=InvarianceAndRightAngleScore.second;
 	//score=AngleInvarianceScore;
-	// score=gainClosingRightAngle*RightAnglescore;
-	 //score=DivergenceScore;
+	//score=gainClosingRightAngle*RightAnglescore;
+	//score=DivergenceScore;
 	//score=AngleInvarianceScore+gainClosingRightAngle*RightAnglescore+DivergenceScore;
 	double RightAnglescore,Variance;
 	double responseScore;
       std::tie(RightAnglescore,Variance,responseScore) =jointEvaluate(point_i,NeighL,NeighR);
-      // score=1000+0.8*RightAnglescoreAndVariance.first-0*RightAnglescoreAndVariance.second;
-      // score=responseScore*RightAnglescore/std::sqrt(Variance);
+      //score=1000+0.8*RightAnglescoreAndVariance.first-0*RightAnglescoreAndVariance.second;
+      //score=responseScore*RightAnglescore/std::sqrt(Variance);
        double expect=1/sin(min_angle/180.d*M_PI);
       // score=1000-responseScore;
       score=exp((expect-RightAnglescore)*(expect-RightAnglescore)*Variance);
-      std::cout<<"score:"<<score<<std::endl;
+      DALKO_DEBUG("score:"<<score<<std::endl);      
       keypoints.emplace_back(keypoint(cluster.indices[i], score));
     }    
    NeighL.clear();
@@ -457,6 +538,7 @@ discriptors extractGeometryFeature::getGCdiscriptor(const point3d &center)
 
 featurePointSet extractGeometryFeature::extractgfs(std::string T)
 {  
+  
   featurePointSet ret;
    if(T== "FAKLO")
      {
@@ -468,7 +550,8 @@ featurePointSet extractGeometryFeature::extractgfs(std::string T)
   //对于二维首先统计出稳定的线点，然后对这点使用区域生成法恢复直线，然后对所有点进行聚类
   //由于初始的种子点可能在一个类中，所以，当种子被聚类到某一类中时，这个种子就会被删除点
   //然后再在每一个类中找到角点 
-  std::cout<<"点云尺寸："<<candiate_pcd.size()<<std::endl;
+  DALKO_DEBUG("点云尺寸："<<candiate_pcd.size()<<std::endl);
+
   std::vector<pcl::PointIndices> clustersWithindices;
   if(IsClustering)
   {
@@ -483,7 +566,9 @@ featurePointSet extractGeometryFeature::extractgfs(std::string T)
     }
     clustersWithindices.emplace_back(tempCluster);
   }
-  std::cout<<"聚类个数："<<clustersWithindices.size()<<std::endl;
+  
+  DALKO_DEBUG("聚类个数："<<clustersWithindices.size()<<std::endl);
+ 
   for(pcl::PointIndices cluster: clustersWithindices)
   {    
     if( T=="IFAKLO")
@@ -651,7 +736,8 @@ featurePointSet extractGeometryFeature::NonMaxSupress()
     for(KeyPoints::iterator it=keypoints.begin();it!=keypoints.end();++it)
     {
       double dist=math::pointDistance(candiate_pcd.points[temkp.index],candiate_pcd.points[(*it).index]);
-      std::cout<<"dist:"<<dist<<std::endl;
+      
+      DALKO_DEBUG("dist:"<<dist<<std::endl);
         if(dist>NMS_radius)
       {
 	tem_keypoints.emplace_back(*it);
@@ -679,7 +765,7 @@ featurePointSet extractGeometryFeature::NonMaxSupress()
     }
   }
   //keypoints.clear();
-  std::cout<<"NMS后特征点个数:"<<ret.size()<<std::endl;
+  DALKO_DEBUG("NMS后特征点个数:"<<ret.size()<<std::endl); 
   return ret;  
  }  
  
@@ -832,7 +918,7 @@ double extractGeometryFeature::EvaulateNeighDivergence(const point3d &center, co
 
 std::pair<double,double> extractGeometryFeature::EvaulateInvarianceNeigh(const point3d& center, const std::vector< point3d >& LeftNeigh, const std::vector< point3d >& rightNeigh)
 {
-/*
+  /*
   size_t max_scale= std::max<size_t>(LeftNeigh.size(),rightNeigh.size());
   std::vector<double> sin_Angle_ratios;
   double score=0;
@@ -887,6 +973,13 @@ double extractGeometryFeature::computeAreaGivenEndpointCoordinates(const point3d
     double area=1/2.d*std::abs(S.determinant());
     return area;
 }
+
+
+double extractGeometryFeature::adaptiveResponsefactor(const double & ri)
+{
+   return double(0.5-5*(ri-0.2)*(ri-2)); 
+}
+
 
 
 Discriptors extractGeometryFeature::getGCdiscriptor()
@@ -1159,6 +1252,15 @@ KeyPoints extractGeometryFeature::getKeypoints()
 point3d extractGeometryFeature::GetPoint3dfromIndex(const int & pointIndex)
 {
   return candiate_pcd.points[pointIndex];
+}
+
+
+void extractGeometryFeature::clear()
+{
+  candiate_pcd.clear();
+  Allkeypoints.clear();
+  keypointPcd.clear();
+  keypoints.clear();
 }
 
 

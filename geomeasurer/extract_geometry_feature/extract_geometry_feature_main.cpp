@@ -1,6 +1,6 @@
 #include "extractgeometryfeature.h"
 
-#include "../viz/viz.hpp"
+#include "../viz/viz.h"
 #include <cstring>
 #include <opencv/highgui.h>
 #include<opencv2/highgui/highgui.hpp>
@@ -23,8 +23,8 @@ int main()
   ranges1=io::fromFile(filedir1);
   extractGeometryFeature gfs(ranges);
   extractGeometryFeature gfs1(ranges1);
-    gfs.setRegionGrowRadius(0.2);
-   gfs1.setRegionGrowRadius(0.2);
+    gfs.setRegionGrowRadius(0.4);
+   gfs1.setRegionGrowRadius(0.4);
    featurePointSet featurepoints1=gfs1.extractgfs("IFAKLO");
     std::time_t begin_t,end_t;
     begin_t=std::clock();
