@@ -58,10 +58,11 @@ namespace geomeasurer
        double t1,t2;
        file>>t1>>t2;
        //  file.seekg(3,std::ios::cur);//这样不行，因为3指定的是字节，而每一位数的字节情况不一定。通用的处理是直接都处理成String
-       int num; file>>num;
+       int num=0; file>>num;
+       
       //range_data.ranges.reserve(num);
       //file.seekg(4,std::ios::cur);
-       for(int i=0;i<180;i++)
+       for(int i=0;i<int(num);i++)
        {
 	 double range;
 	 file>>range;
@@ -132,6 +133,30 @@ RangesCorrespondingtoposes fromlogfile(const std::string& filedir)
     }
     file.close();
     return rcps;
+}
+
+
+std::vector< int > groudtruthfromfile(const std::string& filedir)
+{       
+         std::vector<int> groundtruth;
+         std::ifstream file;
+	 file.open(filedir.c_str(),std::ios_base::in);
+	if (file.good())
+	 {
+	   while(file.good())
+	   {
+	     int temvariable;
+	     file>>temvariable;
+	     groundtruth.emplace_back(temvariable);
+	  }
+	}
+	 else
+	 {
+	   std::cout<<"can not open the groundtruth file in "<<filedir<<std::endl;
+	   exit(0);
+	}
+	file.close();
+	return groundtruth;
 }
 
     

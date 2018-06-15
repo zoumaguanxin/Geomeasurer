@@ -42,6 +42,7 @@ namespace geomeasurer
     std::istream& operator >> (std::istream & file, sensor::rangeData & range_data);    
     sensor::rangeData fromFile(const std::string & filedir); 
    RangesCorrespondingtoposes fromlogfile(const std::string & filedir);
+   std::vector<int> groudtruthfromfile(const std::string &filedir);
   }
 }
 

@@ -7,3 +7,6 @@ add_subdirectory(sensor)
 add_subdirectory(io)
 add_subdirectory(viz)
 
+
+add_subdirectory(test)
+add_subdirectory(bridge)
