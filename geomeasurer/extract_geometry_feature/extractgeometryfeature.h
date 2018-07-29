@@ -135,7 +135,7 @@ public:
 private:
 
 
-  void clear();
+  void KeypointsVclear();
   
   /**
    * @brief 孤立特征点抑制

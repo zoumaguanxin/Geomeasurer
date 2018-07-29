@@ -8,9 +8,11 @@ using namespace geomeasurer;
 
 int main()
 {
-    // std::string filename="../geomeasurer/data/fr079.log";   
-  // std::string filename="../geomeasurer/data/mit-cscail.log";   
-   std::string filename="../geomeasurer/data/intel-lab.log";   
+  
+  //考虑随机抽100组
+    std::string filename="../geomeasurer/data/fr079.log";   
+  //std::string filename="../geomeasurer/data/mit-cscail.log";   //2102个数据
+  // std::string filename="../geomeasurer/data/intel-lab.log";   //5344个数据
    // std::string filedir="../geomeasurer/data/groundtruth_fr079";
    std::string filedir="../geomeasurer/data/groundtruth_intel_lab";
    // std::string filedir="../geomeasurer/data/groundtruth_mit-csail";
@@ -21,9 +23,9 @@ int main()
    
    
    
-     int interval=1;
+     int interval=4;
      std::vector<double> DALKO_repeatability,FALKO_repeatability,FLIRT_repeatability;
-    for(int iter=20;iter<21;iter++)
+    for(int iter=1;iter<50;iter++)
     {
    sensor::rangeWithpose ranges_ref,ranges_src;
    ranges_ref=rcps[iter]; ranges_src=rcps[iter+interval];
@@ -37,9 +39,12 @@ int main()
    retestdalko.setKpAssociationDistThres(0.1);   
    
    retestdalko.setTwoRangesWithPose(ranges_ref,ranges_src);   
+      assert(retestdalko.detect());
    if(retestdalko.detect())
    {
+  
       double dalko_detector_re= retestdalko.getRepeatabilityDetecor();
+     
       DALKO_repeatability.push_back(dalko_detector_re);
    }
    
@@ -62,22 +67,32 @@ int main()
       FLIRT_repeatability.push_back(flirt_detector_re);
   }
    
-   
   }
   
   
-  
+  assert(!DALKO_repeatability.empty());
+  double e_DALKO=0,e_FALKO=0, e_FLIRT=0;
   for(auto re_tem:DALKO_repeatability)
   {
-    std::cout<<"DALKO detector  repeatability test reuslt:"<<re_tem<<std::endl;
+  //  std::cout<<"DALKO detector  repeatability test reuslt:"<<re_tem<<std::endl;
+    e_DALKO+=re_tem;
   }
+  e_DALKO/=DALKO_repeatability.size();
      for(auto re_tem:FALKO_repeatability)
   {
+    e_FALKO+=re_tem;
     std::cout<<"FALKO detector  repeatability test reuslt:"<<re_tem<<std::endl;
   }
-    
+   e_FALKO/=FALKO_repeatability.size(); 
        for(auto re_tem:FLIRT_repeatability)
   {
-    std::cout<<"FLIRT detector  repeatability test reuslt:"<<re_tem<<std::endl;
+    e_FLIRT+=re_tem;
+    //std::cout<<"FLIRT detector  repeatability test reuslt:"<<re_tem<<std::endl;
   }
+  e_FLIRT/=FLIRT_repeatability.size();
+  
+  std::cout<<"expect DALKO detector  repeatability "<<e_DALKO<<std::endl;
+   std::cout<<"expect FALKO detector  repeatability "<<e_FALKO<<std::endl;
+    std::cout<<"expect FLIRT detector  repeatability "<<e_FLIRT<<std::endl;
+  
 }

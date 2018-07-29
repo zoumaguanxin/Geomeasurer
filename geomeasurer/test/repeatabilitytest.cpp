@@ -431,9 +431,16 @@ double RepeatabilityTest::getRepeatabilityDetecor()
   
   ReTest_DEBUG("未被关联的特征点数目："<<unassociatedRefIndexes.size()+unassociatedSrcIndexes.size()<<std::endl);
   
-  int latentNum=getLatentCorrespondingsNum(unassociatedSrcIndexes,unassociatedRefIndexes);    
+  if(num==0)
+  {
+    return 0;
+  }
   
+  int latentNum=getLatentCorrespondingsNum(unassociatedSrcIndexes,unassociatedRefIndexes);    
+
   return  double(num)/double(latentNum+num);  
+  
+  
     
 }
 
@@ -441,7 +448,7 @@ double RepeatabilityTest::getRepeatabilityDetecor()
 
 double RepeatabilityTest::getRepeatabilityDescriptos()
 {
-
+   
   if(groundKpPairs.empty())
   {
     std::cout<<" skip the data due to absence of the ground truth association  "<<std::endl;
@@ -487,22 +494,28 @@ void RepeatabilityTest::setMatchTrue()
 bool RepeatabilityTestDALKO::detect()
 {
   
-        extractGeometryFeature gfs(Range_src),gfs1(Range_ref);      
-       // gfs.setInputRanges(Range_src);
+       // extractGeometryFeature gfs(Range_src),gfs1(Range_ref);      
+	     //extractGeometryFeature gfs(Range_src),gfs1(Range_ref);    
+        gfs.setInputRanges(Range_src);
 	gfs.setRegionGrowRadius(0.4);
 	src_kps.clear();
         src_kps= gfs.extractgfs("IFAKLO");
 	kp_kps_src.clear();
 	kp_kps_src=gfs.getKeypoints();
-	//assert(!src_kps.empty());
-	//gfs1.setInputRanges(Range_ref);
-	gfs1.setRegionGrowRadius(0.4);
+	
+	src_kps_des=gfs.getGCdiscriptor();
+	
+	gfs.setInputRanges(Range_ref);
+	//gfs1.setRegionGrowRadius(0.4);
 	ref_kps.clear();
-	ref_kps=gfs1.extractgfs("IFAKLO");
+	//ref_kps=gfs1.extractgfs("IFAKLO");
+	  ref_kps= gfs.extractgfs("IFAKLO");
 	kp_kps_ref.clear();
-	kp_kps_ref=gfs1.getKeypoints();
-	//assert(!ref_kps.empty());
-	setDetectedTrue();
+	//kp_kps_ref=gfs1.getKeypoints();
+	kp_kps_ref=gfs.getKeypoints();
+        ref_kps_des=gfs.getGCdiscriptor(); 
+	setDetectedTrue();	
+	//assert(!src_kps.empty());assert(!ref_kps.empty());
 	if(src_kps.empty()||ref_kps.empty())
 	return false;
 	else
@@ -510,10 +523,26 @@ bool RepeatabilityTestDALKO::detect()
 	
 }
 
-std::vector< std::pair< int, int > > RepeatabilityTestDALKO::match()
+int  RepeatabilityTestDALKO::match()
 {
-  
-  
+  matchedKpPairs.clear();
+  std::vector<std::tuple<int, int,double>> pairswithscores=  gfs.match(kp_kps_src,src_kps_des);
+  for(auto pair:pairswithscores)
+  {
+    int ref_index, src_index;
+    double score;
+    std::tie(ref_index,src_index,score)=pair;
+    //因为groudpairs中是src_index,ref_index
+    matchedKpPairs.emplace_back(std::make_pair(src_index,ref_index));    
+    
+
+  }    
+      ReTest_DEBUG("num of matching success: "<<matchedKpPairs.size()<<std::endl);
+      if(re_debug)
+      {
+	
+      }
+  return matchedKpPairs.size();
 }
 
 
@@ -566,9 +595,9 @@ bool RepeatabilityTestFALKO::detect()
 }
 
 
-std::vector< std::pair< int, int > > RepeatabilityTestFALKO::match()
+int RepeatabilityTestFALKO::match()
 {
-        
+    
 }
 
 
@@ -620,7 +649,7 @@ bool RepeatabilityTestFLIRT::detect()
 }
 
 
-std::vector< std::pair< int, int > > RepeatabilityTestFLIRT::match()
+int RepeatabilityTestFLIRT::match()
 {
 
 }
@@ -817,6 +846,8 @@ if(!isdetected)
   
   ReTest_DEBUG("未被关联的特征点数目："<<unassociatedRefIndexes.size()+unassociatedSrcIndexes.size()<<std::endl);
   
+  if(num==0)
+  return 0;
   int latentNum=getLatentCorrespondingsNum(unassociatedSrcIndexes,unassociatedRefIndexes);   
   
   return  double(num)/double(latentNum+num);  

@@ -136,6 +136,7 @@ RangesCorrespondingtoposes fromlogfile(const std::string& filedir)
 }
 
 
+
 std::vector< int > groudtruthfromfile(const std::string& filedir)
 {       
          std::vector<int> groundtruth;
@@ -158,8 +159,7 @@ std::vector< int > groudtruthfromfile(const std::string& filedir)
 	file.close();
 	return groundtruth;
 }
-
-    
+   
   }// namespace io
 }//namespace geomeasurer
 

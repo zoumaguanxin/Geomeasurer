@@ -198,6 +198,7 @@ std::vector< pcl::PointIndices > extractGeometryFeature::EuclideanClusterExtract
 
 void extractGeometryFeature::setInputRanges(const sensor::rangeData& ranges_)
 {
+    candiate_pcd.clear();  
     candiate_pcd=sensor::fromRangeData(ranges_);
    ranges=ranges_;
 }
@@ -539,6 +540,7 @@ discriptors extractGeometryFeature::getGCdiscriptor(const point3d &center)
 featurePointSet extractGeometryFeature::extractgfs(std::string T)
 {  
   
+   KeypointsVclear();
   featurePointSet ret;
    if(T== "FAKLO")
      {
@@ -551,7 +553,7 @@ featurePointSet extractGeometryFeature::extractgfs(std::string T)
   //由于初始的种子点可能在一个类中，所以，当种子被聚类到某一类中时，这个种子就会被删除点
   //然后再在每一个类中找到角点 
   DALKO_DEBUG("点云尺寸："<<candiate_pcd.size()<<std::endl);
-
+  assert(!candiate_pcd.empty());
   std::vector<pcl::PointIndices> clustersWithindices;
   if(IsClustering)
   {
@@ -987,8 +989,10 @@ Discriptors extractGeometryFeature::getGCdiscriptor()
   
     fromAllkeypoints();
     GCdiscriptors.resize(dscpSectorsNum,Allkeypoints.size()); 
-    std::cout<<GCdiscriptors.rows()<<std::endl;
-    std::cout<<GCdiscriptors.cols()<<std::endl;
+    DALKO_DEBUG(GCdiscriptors.rows()<<std::endl);
+    DALKO_DEBUG(GCdiscriptors.cols()<<std::endl);
+//     std::cout<<GCdiscriptors.rows()<<std::endl;
+//     std::cout<<GCdiscriptors.cols()<<std::endl;
     GCdiscriptors.setZero();
          int j=0,i=0;
     for(keypoint kp:Allkeypoints)
@@ -1255,9 +1259,8 @@ point3d extractGeometryFeature::GetPoint3dfromIndex(const int & pointIndex)
 }
 
 
-void extractGeometryFeature::clear()
+void extractGeometryFeature::KeypointsVclear()
 {
-  candiate_pcd.clear();
   Allkeypoints.clear();
   keypointPcd.clear();
   keypoints.clear();

@@ -84,7 +84,7 @@ int getCorrespondingsNum();
 
 pose2d computeRelativePose();
  virtual bool detect()=0;
- virtual std::vector<std::pair<int, int>> match()=0;
+ virtual int match()=0;
 ~RepeatabilityTest();
 RepeatabilityTest& operator=(const RepeatabilityTest& other);
 bool operator==(const RepeatabilityTest& other);
@@ -115,7 +115,6 @@ void getNeiborhoodMember(PointCloud::ConstPtr pcd_ptr, const size_t& center_inde
   pose2d relativePose;
   
   std::vector<std::pair<int,int>> groundKpPairs;
-
   sensor::rangeWithpose Ref_rangewithpose;
   sensor::rangeWithpose Src_rangewithpose;
   std::vector<std::pair<int,int>> matchedKpPairs;
@@ -125,14 +124,10 @@ void getNeiborhoodMember(PointCloud::ConstPtr pcd_ptr, const size_t& center_inde
   double a=0.2;
   double b=0.07;
   double max_hausdorff_distance;  
-
- 
   
   bool ismathched=false;
   
   bool isdetected=false;
-  
-
   
   double kp_association_dist_thres;
 };
@@ -145,8 +140,11 @@ class RepeatabilityTestDALKO:public RepeatabilityTest
   RepeatabilityTestDALKO(){}
   RepeatabilityTestDALKO(const int& k_, const double& max_hausdorff_distance_ ):RepeatabilityTest(k_,max_hausdorff_distance_){}
   virtual bool detect();
-  virtual std::vector< std::pair< int, int > > match();  
+  virtual int match();  
   private:
+    extractGeometryFeature gfs;
+    geomeasurer::Discriptors ref_kps_des;
+    geomeasurer::Discriptors src_kps_des;
 };
 
 
@@ -156,9 +154,7 @@ public:
 RepeatabilityTestFALKO(){}
 RepeatabilityTestFALKO(const int& k_, const double& max_hausdorff_distance_):RepeatabilityTest(k_,max_hausdorff_distance_){}
     virtual bool detect();
-    virtual std::vector< std::pair< int, int > > match();
-
-
+    virtual int match();
 private:
  
   
@@ -172,11 +168,10 @@ public:
 RepeatabilityTestFLIRT(){};
 RepeatabilityTestFLIRT(const int& k_, const double& max_hausdorff_distance_):RepeatabilityTest(k_,max_hausdorff_distance_){}
  virtual bool detect();
- virtual std::vector< std::pair< int, int > > match();
+ virtual int match();
  virtual double getRepeatabilityDetecor();
  virtual int getLatentCorrespondingsNum(const std::vector<int> &unassociatedSrcIndexes, const std::vector<int> &unassociatedRefIndexes);
   std::vector<InterestPoint*> keypoints_src,keypoints_ref;
-
 };
 
 }
