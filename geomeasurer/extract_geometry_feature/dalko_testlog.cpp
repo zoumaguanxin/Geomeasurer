@@ -4,11 +4,11 @@
 
 
 #include <cstring>
-#include <opencv/highgui.h>
+//#include <opencv/highgui.h>
 #include<opencv2/highgui/highgui.hpp>
 #include<opencv2/imgproc/imgproc.hpp>
 #include<opencv2//core/core.hpp>
-#include <boost/graph/graph_concepts.hpp>
+
 #include<ctime>
 using namespace geomeasurer;
 int main()
@@ -95,6 +95,7 @@ int main()
      
      
 
+    return 0;
 
  //viz::imshowPCDWithKeypoints("extractCornerFromRanges",ranges,featurePoints_rangeResponsed);  
   

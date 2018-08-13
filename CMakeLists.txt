@@ -9,7 +9,7 @@ find_package(falkolib REQUIRED)
 
 find_package(FLIRT REQUIRED)
 
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED)
 
 find_package(OpenCV REQUIRED)
 
@@ -50,10 +50,10 @@ add_executable(FLIRT_test geomeasurer/test/FLIRT_test.cpp ${LIB_SRC})
 #target_link_libraries(testgfs gfs)
 
 
-set(Test_TARGET_FILE  false_neg_rate_test repeatative_test descriptors_test)
+#set(Test_TARGET_FILE  false_neg_rate_test repeatative_test descriptors_test)
 
 target_link_libraries(testgfs ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
-target_link_libraries(test_falko ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
+target_link_libraries(test_falko ${PCL_LIBRARY_DIRS} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
 target_link_libraries(dalko_testlog ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
 target_link_libraries(label ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
 target_link_libraries(false_neg_rate_test ${PCL_LIBRARIES} ${falkolib_LIBRARIES} ${OpenCV_LIBS} ${FLIRT_LIBRARIES})
