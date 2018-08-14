@@ -19,8 +19,11 @@ make
 
 
 Dependencies
+
 FLIRT
+
 Refer to https://github.com/tipaldi/flirtlib
+
 Note: for the reason that the "gui" lib of flirtlib might difficultly be installed, so you can edit its CMakeLists.txt to disable it.
 
 After finish its installation, use the following command line to find FLIRTConfig.cmake
