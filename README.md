@@ -1,6 +1,6 @@
 # DALKO
 This a 2d laser feature detector which is more robust than falko algorithm. It detects the corner in laserscan. 
-Compared to Flirt algorthm, it is more suitale to our expection.
+Compared to Flirt algorthm, it is more suitable to our expection.
 
 
 
