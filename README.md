@@ -7,9 +7,9 @@ Compared to Flirt algorthm, it is more suitable to our expection.
 Build Instructions
 ```
 
-git clone https://github.com/zoumaguanxin/DALKO.git
+git clone https://github.com/zoumaguanxin/Geomeasurer.git
 
-cd DALKO
+cd Geomeasurer
 
 mkdir build
 
